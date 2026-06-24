@@ -13,7 +13,7 @@ H(T\mid h,r)
 -\sum_{t\in \mathcal{N}_{h}^{r}}p(t\mid h,r)\log p(t\mid h,r).
 \]
 
-It is worth noting that this distribution is not the global tail distribution \(p(t\mid r)\) over the whole knowledge graph. In other words, we do not assume that all tail entities connected by relation \(r\) are globally uniformly distributed. Instead, we focus on the local branching uncertainty after a specific head entity \(h\) and relation \(r\) are given.
+Here, the conditional distribution is defined over the local tail set \(\mathcal{N}_{h}^{r}\) after the head entity \(h\) and relation \(r\) are specified. It measures how dispersed the reachable tail entities are within this local neighborhood, rather than characterizing the global tail distribution of relation \(r\) over the entire knowledge graph.
 
 In standard knowledge graphs, triples are usually unweighted, meaning that the graph only indicates whether a triple exists, without providing edge weights, occurrence frequencies, or confidence scores for different tails under the same \((h,r)\). Therefore, in the absence of additional probabilistic information, we adopt a local maximum-entropy prior and treat the observed tail entities in \(\mathcal{N}_{h}^{r}\) as equally likely neighbors:
 \[
@@ -23,18 +23,18 @@ p(t\mid h,r)=\frac{1}{|\mathcal{N}_{h}^{r}|}.
 Substituting this local prior into the conditional entropy gives:
 \[
 \begin{aligned}
-H(T\mid h,r)
-&=
--\sum_{t\in \mathcal{N}_{h}^{r}}
-\frac{1}{|\mathcal{N}_{h}^{r}|}
-\log \frac{1}{|\mathcal{N}_{h}^{r}|} \\
-&=
--|\mathcal{N}_{h}^{r}|
-\cdot
-\frac{1}{|\mathcal{N}_{h}^{r}|}
-\log \frac{1}{|\mathcal{N}_{h}^{r}|} \\
-&=
-\log |\mathcal{N}_{h}^{r}|.
+	H(T\mid h,r)
+	&=
+	-\sum_{t\in \mathcal{N}_{h}^{r}}
+	\frac{1}{|\mathcal{N}_{h}^{r}|}
+	\log \frac{1}{|\mathcal{N}_{h}^{r}|} \\
+	&=
+	-|\mathcal{N}_{h}^{r}|
+	\cdot
+	\frac{1}{|\mathcal{N}_{h}^{r}|}
+	\log \frac{1}{|\mathcal{N}_{h}^{r}|} \\
+	&=
+	\log |\mathcal{N}_{h}^{r}|.
 \end{aligned}
 \]
 

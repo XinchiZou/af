@@ -17,26 +17,6 @@ Second, the refined KG and the user-item interaction graph are processed in para
 \subsection{Entropy-Guided Structure Learning}
 In real-world KGs, relations exhibit significant variance in their informativeness. We posit that relations crucial for recommendation often demonstrate high specificity (i.e., low uncertainty), whereas overly generalized relations manifest high structural uncertainty (or ``entropy"). High entropy can signal potential noise but does not guarantee it; some such triplets may still carry valuable semantics. For example, the relation `Movie $\rightarrow$ directed\_by $\rightarrow$ Nolan' is typically unique, conveying a strong stylistic signal. In contrast, relations like `Movie $\rightarrow$ starring $\rightarrow$ \{Actor List\}' or `Item $\rightarrow$ also\_bought $\rightarrow$ \{Massive Items\}' connect a head entity to a vast, diverse set of tails, introducing high uncertainty and potential semantic drift during aggregation. To address this, we design a structure learning mechanism that fuses a static entropy prior with a dynamic semantic posterior.
 
-%In real-world KGs, relations vary significantly in their informativeness. We observe that relations critical to recommendation tasks often exhibit high specificity (i.e., ``low entropy''), whereas overly generalized relations manifest high structural uncertainty (i.e., ``high entropy''). Importantly, high entropy signals potential noise but does not guarantee it---some high-entropy triplets may still carry valuable semantics.
-%
-%Taking movie recommendation as an instance, the relation \textit{``Movie $\xrightarrow{\text{directed\_by}}$ Nolan''} is typically unique or sparse; such a deterministic structure implies strong stylistic preference signals. Conversely, relations like \textit{``Movie $\xrightarrow{\text{starring}}$ \{Actor List\}''} or \textit{``Item $\xrightarrow{\text{also\_bought}}$ \{Massive Items\}''} typically connect a single head entity to a massive set of tail entities. This ``one-to-many'' high-branching structure introduces substantial uncertainty, leading to semantic drift during neighborhood aggregation. To address this, we propose a structure learning mechanism that combines a static entropy prior with a dynamic semantic posterior.
-
-%\subsubsection{\textbf{Relational Entropy Prior}}
-%Our hypothesis is that a relation connecting head entities to a highly diverse set of tail entities possesses high distributional uncertainty. Such relations often correspond to noisy or weak-specificity connections and should be assigned lower retention probabilities. We employ conditional entropy to quantify this ``branching" uncertainty for a relation \(r \in \mathcal{R}\).
-% Given a head entity \(h\), the entropy of the tail distribution is:
-%\begin{equation}
-%	H(T | h, r) = - \sum\nolimits_{t \in \mathcal{N}_{h}^{r}} p(t | h, r) \log p(t | h, r),
-%\end{equation}
-%where $\mathcal{N}_{h}^{r} = \{t \mid (h, r, t) \in \mathcal{G}_{kg}\}$ denotes the set of tail entities connected to $h$ via $r$. Since KG triplets are unique and non-repeating, the tail distribution is inherently uniform, i.e., $p(t | h, r) = 1/|\mathcal{N}_{h}^{r}|$. Consequently, the entropy formula simplifies to the logarithmic form of the branching factor, directly measuring the dispersion of neighbors. The global entropy for relation \(r\) is obtained by averaging over all associated heads \(\mathcal{H}_r\):
-%\begin{equation}
-%	H(r) = \frac{1}{|\mathcal{H}_r|} \sum\nolimits_{h \in \mathcal{H}_r} \log |\mathcal{N}_{h}^{r}|.
-%\end{equation}
-%We then define a structural prior score as the normalized inverse entropy:
-%\begin{equation}
-%	S_{\text{prior}}(r) = 1 - \frac{H(r)}{\max_{r' \in \mathcal{R}} H(r')}.
-%\end{equation}
-%This score reflects the ``purity" of a relation: a lower \(H(r)\) indicates a tendency for ``one-to-one" or ``one-to-few" connections, warranting higher prior confidence.
-
 
 \subsubsection{Relation Entropy Prior}
 

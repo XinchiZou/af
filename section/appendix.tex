@@ -1,0 +1,65 @@
+\section{Derivation of Relation Branching Entropy}
+\label{app:relation_entropy}
+
+The relation entropy prior aims to measure the structural branching uncertainty of each relation \(r\). Given a head entity \(h\) and a relation \(r\), we denote the corresponding tail entity set as
+\[
+\mathcal{N}_{h}^{r}=\{t \mid (h,r,t)\in \mathcal{G}_{kg}\}.
+\]
+
+We first consider the local uncertainty of tail selection conditioned on a specific head-relation pair \((h,r)\):
+\[
+H(T\mid h,r)
+=
+-\sum_{t\in \mathcal{N}_{h}^{r}}p(t\mid h,r)\log p(t\mid h,r).
+\]
+
+It is worth noting that this distribution is not the global tail distribution \(p(t\mid r)\) over the whole knowledge graph. In other words, we do not assume that all tail entities connected by relation \(r\) are globally uniformly distributed. Instead, we focus on the local branching uncertainty after a specific head entity \(h\) and relation \(r\) are given.
+
+In standard knowledge graphs, triples are usually unweighted, meaning that the graph only indicates whether a triple exists, without providing edge weights, occurrence frequencies, or confidence scores for different tails under the same \((h,r)\). Therefore, in the absence of additional probabilistic information, we adopt a local maximum-entropy prior and treat the observed tail entities in \(\mathcal{N}_{h}^{r}\) as equally likely neighbors:
+\[
+p(t\mid h,r)=\frac{1}{|\mathcal{N}_{h}^{r}|}.
+\]
+
+Substituting this local prior into the conditional entropy gives:
+\[
+\begin{aligned}
+H(T\mid h,r)
+&=
+-\sum_{t\in \mathcal{N}_{h}^{r}}
+\frac{1}{|\mathcal{N}_{h}^{r}|}
+\log \frac{1}{|\mathcal{N}_{h}^{r}|} \\
+&=
+-|\mathcal{N}_{h}^{r}|
+\cdot
+\frac{1}{|\mathcal{N}_{h}^{r}|}
+\log \frac{1}{|\mathcal{N}_{h}^{r}|} \\
+&=
+\log |\mathcal{N}_{h}^{r}|.
+\end{aligned}
+\]
+
+Thus, the conditional entropy of a given head-relation pair reduces to the logarithm of its branching factor. A larger value means that more tail entities can be reached from \(h\) through relation \(r\), indicating higher local structural uncertainty.
+
+To obtain a relation-level measure, we aggregate the local branching entropy over all head entities associated with relation \(r\). Let
+\[
+\mathcal{H}_{r}
+=
+\{h \mid \exists t,\ (h,r,t)\in \mathcal{G}_{kg}\}.
+\]
+The branching entropy of relation \(r\) is then defined as:
+\[
+H(r)
+=
+\frac{1}{|\mathcal{H}_{r}|}
+\sum_{h\in \mathcal{H}_{r}}
+\log |\mathcal{N}_{h}^{r}|.
+\]
+
+Finally, we normalize the inverse entropy to obtain the structural prior score:
+\[
+S_{\mathrm{prior}}(r)
+=
+1-\frac{H(r)}{\max_{r'\in\mathcal{R}}H(r')}.
+\]
+
+A larger \(S_{\mathrm{prior}}(r)\) indicates lower structural branching uncertainty and higher prior reliability. This prior is later combined with the triplet-level semantic score to guide knowledge graph structure filtering.

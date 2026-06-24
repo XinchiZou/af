@@ -21,20 +21,44 @@ In real-world KGs, relations exhibit significant variance in their informativene
 %
 %Taking movie recommendation as an instance, the relation \textit{``Movie $\xrightarrow{\text{directed\_by}}$ Nolan''} is typically unique or sparse; such a deterministic structure implies strong stylistic preference signals. Conversely, relations like \textit{``Movie $\xrightarrow{\text{starring}}$ \{Actor List\}''} or \textit{``Item $\xrightarrow{\text{also\_bought}}$ \{Massive Items\}''} typically connect a single head entity to a massive set of tail entities. This ``one-to-many'' high-branching structure introduces substantial uncertainty, leading to semantic drift during neighborhood aggregation. To address this, we propose a structure learning mechanism that combines a static entropy prior with a dynamic semantic posterior.
 
-\subsubsection{\textbf{Relational Entropy Prior}}
-Our hypothesis is that a relation connecting head entities to a highly diverse set of tail entities possesses high distributional uncertainty. Such relations often correspond to noisy or weak-specificity connections and should be assigned lower retention probabilities. We employ conditional entropy to quantify this ``branching" uncertainty for a relation \(r \in \mathcal{R}\). Given a head entity \(h\), the entropy of the tail distribution is:
-\begin{equation}
-	H(T | h, r) = - \sum\nolimits_{t \in \mathcal{N}_{h}^{r}} p(t | h, r) \log p(t | h, r),
-\end{equation}
-where $\mathcal{N}_{h}^{r} = \{t \mid (h, r, t) \in \mathcal{G}_{kg}\}$ denotes the set of tail entities connected to $h$ via $r$. Since KG triplets are unique and non-repeating, the tail distribution is inherently uniform, i.e., $p(t | h, r) = 1/|\mathcal{N}_{h}^{r}|$. Consequently, the entropy formula simplifies to the logarithmic form of the branching factor, directly measuring the dispersion of neighbors. The global entropy for relation \(r\) is obtained by averaging over all associated heads \(\mathcal{H}_r\):
-\begin{equation}
-	H(r) = \frac{1}{|\mathcal{H}_r|} \sum\nolimits_{h \in \mathcal{H}_r} \log |\mathcal{N}_{h}^{r}|.
-\end{equation}
-We then define a structural prior score as the normalized inverse entropy:
-\begin{equation}
-	S_{\text{prior}}(r) = 1 - \frac{H(r)}{\max_{r' \in \mathcal{R}} H(r')}.
-\end{equation}
-This score reflects the ``purity" of a relation: a lower \(H(r)\) indicates a tendency for ``one-to-one" or ``one-to-few" connections, warranting higher prior confidence.
+%\subsubsection{\textbf{Relational Entropy Prior}}
+%Our hypothesis is that a relation connecting head entities to a highly diverse set of tail entities possesses high distributional uncertainty. Such relations often correspond to noisy or weak-specificity connections and should be assigned lower retention probabilities. We employ conditional entropy to quantify this ``branching" uncertainty for a relation \(r \in \mathcal{R}\).
+% Given a head entity \(h\), the entropy of the tail distribution is:
+%\begin{equation}
+%	H(T | h, r) = - \sum\nolimits_{t \in \mathcal{N}_{h}^{r}} p(t | h, r) \log p(t | h, r),
+%\end{equation}
+%where $\mathcal{N}_{h}^{r} = \{t \mid (h, r, t) \in \mathcal{G}_{kg}\}$ denotes the set of tail entities connected to $h$ via $r$. Since KG triplets are unique and non-repeating, the tail distribution is inherently uniform, i.e., $p(t | h, r) = 1/|\mathcal{N}_{h}^{r}|$. Consequently, the entropy formula simplifies to the logarithmic form of the branching factor, directly measuring the dispersion of neighbors. The global entropy for relation \(r\) is obtained by averaging over all associated heads \(\mathcal{H}_r\):
+%\begin{equation}
+%	H(r) = \frac{1}{|\mathcal{H}_r|} \sum\nolimits_{h \in \mathcal{H}_r} \log |\mathcal{N}_{h}^{r}|.
+%\end{equation}
+%We then define a structural prior score as the normalized inverse entropy:
+%\begin{equation}
+%	S_{\text{prior}}(r) = 1 - \frac{H(r)}{\max_{r' \in \mathcal{R}} H(r')}.
+%\end{equation}
+%This score reflects the ``purity" of a relation: a lower \(H(r)\) indicates a tendency for ``one-to-one" or ``one-to-few" connections, warranting higher prior confidence.
+
+
+\subsubsection{Relation Entropy Prior}
+
+To estimate the structural reliability of different relations, we compute a relation-level branching entropy for each relation \(r \in \mathcal{R}\). Intuitively, if a relation frequently connects a head entity to many tail entities, it usually exhibits weaker structural specificity and higher uncertainty, and may therefore introduce more noisy or less informative semantic signals. In contrast, relations with nearly one-to-one or one-to-few patterns tend to provide stronger structural constraints and should be assigned higher prior confidence.
+
+Formally, for a given relation \(r\), let \(\mathcal{N}_{h}^{r}\) denote the tail entities connected to head entity \(h\) through \(r\), and let \(\mathcal{H}_{r}\) denote all head entities associated with relation \(r\). Following the derivation in Appendix~\ref{app:relation_entropy}, we define the structural uncertainty of relation \(r\) as the average branching entropy over its associated head entities:
+\[
+H(r)
+=
+\frac{1}{|\mathcal{H}_{r}|}
+\sum_{h\in \mathcal{H}_{r}}
+\log |\mathcal{N}_{h}^{r}|.
+\]
+
+A larger \(H(r)\) indicates that relation \(r\) tends to connect each head entity to more tail entities on average, implying higher structural dispersion and weaker relation specificity. We then convert this entropy into a normalized inverse-entropy prior:
+\[
+S_{\mathrm{prior}}(r)
+=
+1-\frac{H(r)}{\max_{r'\in\mathcal{R}}H(r')}.
+\]
+
+Therefore, relations with lower branching entropy obtain higher structural prior scores and are more likely to be preserved during triplet filtering, while relations with higher branching entropy are treated more conservatively. This design allows the model to suppress potentially noisy or weakly specific relations before triplet-level semantic scoring.
 
 \subsubsection{\textbf{Semantic Posterior Scoring}}
 

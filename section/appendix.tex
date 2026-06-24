@@ -2,26 +2,30 @@
 \label{app:relation_entropy}
 
 The relation entropy prior aims to measure the structural branching uncertainty of each relation \(r\). Given a head entity \(h\) and a relation \(r\), we denote the corresponding tail entity set as
-\[
+\begin{equation}
+\label{eq:app_tail_set}
 \mathcal{N}_{h}^{r}=\{t \mid (h,r,t)\in \mathcal{G}_{kg}\}.
-\]
+\end{equation}
 
 We first consider the local uncertainty of tail selection conditioned on a specific head-relation pair \((h,r)\):
-\[
+\begin{equation}
+\label{eq:app_local_entropy}
 H(T\mid h,r)
 =
 -\sum_{t\in \mathcal{N}_{h}^{r}}p(t\mid h,r)\log p(t\mid h,r).
-\]
+\end{equation}
 
-Here, the conditional distribution is defined over the local tail set \(\mathcal{N}_{h}^{r}\) after the head entity \(h\) and relation \(r\) are specified. It measures how dispersed the reachable tail entities are within this local neighborhood, rather than characterizing the global tail distribution of relation \(r\) over the entire knowledge graph.
+Here, the conditional distribution is defined over the local tail set \(\mathcal{N}_{h}^{r}\) after the head entity \(h\) and relation \(r\) are specified. It measures how dispersed the reachable tail entities are within this local neighborhood, rather than characterizing the global tail distribution \(p(t\mid r)\) of relation \(r\) over the entire knowledge graph.
 
 In standard knowledge graphs, triples are usually unweighted, meaning that the graph only indicates whether a triple exists, without providing edge weights, occurrence frequencies, or confidence scores for different tails under the same \((h,r)\). Therefore, in the absence of additional probabilistic information, we adopt a local maximum-entropy prior and treat the observed tail entities in \(\mathcal{N}_{h}^{r}\) as equally likely neighbors:
-\[
+\begin{equation}
+\label{eq:app_local_uniform_prior}
 p(t\mid h,r)=\frac{1}{|\mathcal{N}_{h}^{r}|}.
-\]
+\end{equation}
 
 Substituting this local prior into the conditional entropy gives:
-\[
+\begin{equation}
+\label{eq:app_entropy_derivation}
 \begin{aligned}
 	H(T\mid h,r)
 	&=
@@ -36,30 +40,33 @@ Substituting this local prior into the conditional entropy gives:
 	&=
 	\log |\mathcal{N}_{h}^{r}|.
 \end{aligned}
-\]
+\end{equation}
 
 Thus, the conditional entropy of a given head-relation pair reduces to the logarithm of its branching factor. A larger value means that more tail entities can be reached from \(h\) through relation \(r\), indicating higher local structural uncertainty.
 
 To obtain a relation-level measure, we aggregate the local branching entropy over all head entities associated with relation \(r\). Let
-\[
+\begin{equation}
+\label{eq:app_head_set}
 \mathcal{H}_{r}
 =
 \{h \mid \exists t,\ (h,r,t)\in \mathcal{G}_{kg}\}.
-\]
+\end{equation}
 The branching entropy of relation \(r\) is then defined as:
-\[
+\begin{equation}
+\label{eq:app_relation_branching_entropy}
 H(r)
 =
 \frac{1}{|\mathcal{H}_{r}|}
 \sum_{h\in \mathcal{H}_{r}}
 \log |\mathcal{N}_{h}^{r}|.
-\]
+\end{equation}
 
 Finally, we normalize the inverse entropy to obtain the structural prior score:
-\[
+\begin{equation}
+\label{eq:app_relation_entropy_prior}
 S_{\mathrm{prior}}(r)
 =
 1-\frac{H(r)}{\max_{r'\in\mathcal{R}}H(r')}.
-\]
+\end{equation}
 
 A larger \(S_{\mathrm{prior}}(r)\) indicates lower structural branching uncertainty and higher prior reliability. This prior is later combined with the triplet-level semantic score to guide knowledge graph structure filtering.

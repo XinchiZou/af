@@ -1,0 +1,201 @@
+% !TEX spellcheck = en_US
+% !TeX root = main.tex
+
+
+
+
+%This section presents FlowKG, a novel framework designed to address structural noise and representation degradation in knowledge graph-enhanced recommendation through three synergistic components, as illustrated in Figure~\ref{fig:model}.
+
+In this section, we introduce FlowKG, a novel framework designed to combat structural noise and representation degradation in knowledge graph-enhanced recommendation. FlowKG comprises three synergistic components, as illustrated in Figure~\ref{fig:model}: an Entropy-Guided Structure Learning (ESL) module, a Decoupled Dual-View Encoder, and a Flow Matching Representation Refinement module.
+
+\subsection{Overall Architecture}
+Our framework operates through three interconnected stages designed to sequentially address the core challenges.
+First, to mitigate the pervasive noisy connections within real-world KGs, we propose the Entropy-Guided Structure Learning (ESL) module. This module adaptively prunes low-informative triplets by integrating a static relational entropy prior with a dynamic, learnable semantic posterior, yielding a refined and task-relevant graph structure.
+Second, the refined KG and the user-item interaction graph are processed in parallel by the Decoupled Dual-View Encoder. This design explicitly severs the direct propagation of KG noise into the collaborative signal space, capturing complementary signals from the two views while constructing robust augmented representations for contrastive learning. Finally, to counteract the over-smoothing effect inherent in multi-layer GNNs and to further purify residual noise, we introduce the Flow Matching Refinement module. It models the evolution of item embeddings as a continuous trajectory defined by an ODE, transforming potentially noisy or sub-optimal representations into a refined semantic manifold.
+%Our framework operates through three mutually reinforcing stages. First, to mitigate the prevalent noisy connections in KGs, we propose the Entropy-Guided Structure Learning (ESL) module. This module adaptively prunes low-quality triplets by integrating a static entropy prior with a dynamic semantic posterior. Second, the refined graph, along with the user-item interaction graph, is fed into the Decoupled Dual-View Encoder. This encoder captures collaborative and semantic signals in parallel and explicitly constructs augmented views to facilitate CL. Finally, to combat the over-smoothing effect inherent in GNNs, we introduce the Flow Matching Refinement module, which models embedding evolution as continuous ODEs, transforming noisy representations into robust target distributions.
+
+\subsection{Entropy-Guided Structure Learning}
+In real-world KGs, relations exhibit significant variance in their informativeness. We posit that relations crucial for recommendation often demonstrate high specificity (i.e., low uncertainty), whereas overly generalized relations manifest high structural uncertainty (or ``entropy"). High entropy can signal potential noise but does not guarantee it; some such triplets may still carry valuable semantics. For example, the relation `Movie $\rightarrow$ directed\_by $\rightarrow$ Nolan' is typically unique, conveying a strong stylistic signal. In contrast, relations like `Movie $\rightarrow$ starring $\rightarrow$ \{Actor List\}' or `Item $\rightarrow$ also\_bought $\rightarrow$ \{Massive Items\}' connect a head entity to a vast, diverse set of tails, introducing high uncertainty and potential semantic drift during aggregation. To address this, we design a structure learning mechanism that fuses a static entropy prior with a dynamic semantic posterior.
+
+%In real-world KGs, relations vary significantly in their informativeness. We observe that relations critical to recommendation tasks often exhibit high specificity (i.e., ``low entropy''), whereas overly generalized relations manifest high structural uncertainty (i.e., ``high entropy''). Importantly, high entropy signals potential noise but does not guarantee it---some high-entropy triplets may still carry valuable semantics.
+%
+%Taking movie recommendation as an instance, the relation \textit{``Movie $\xrightarrow{\text{directed\_by}}$ Nolan''} is typically unique or sparse; such a deterministic structure implies strong stylistic preference signals. Conversely, relations like \textit{``Movie $\xrightarrow{\text{starring}}$ \{Actor List\}''} or \textit{``Item $\xrightarrow{\text{also\_bought}}$ \{Massive Items\}''} typically connect a single head entity to a massive set of tail entities. This ``one-to-many'' high-branching structure introduces substantial uncertainty, leading to semantic drift during neighborhood aggregation. To address this, we propose a structure learning mechanism that combines a static entropy prior with a dynamic semantic posterior.
+
+\subsubsection{\textbf{Relational Entropy Prior}}
+Our hypothesis is that a relation connecting head entities to a highly diverse set of tail entities possesses high distributional uncertainty. Such relations often correspond to noisy or weak-specificity connections and should be assigned lower retention probabilities. We employ conditional entropy to quantify this ``branching" uncertainty for a relation \(r \in \mathcal{R}\). Given a head entity \(h\), the entropy of the tail distribution is:
+\begin{equation}
+	H(T | h, r) = - \sum\nolimits_{t \in \mathcal{N}_{h}^{r}} p(t | h, r) \log p(t | h, r),
+\end{equation}
+where $\mathcal{N}_{h}^{r} = \{t \mid (h, r, t) \in \mathcal{G}_{kg}\}$ denotes the set of tail entities connected to $h$ via $r$. Since KG triplets are unique and non-repeating, the tail distribution is inherently uniform, i.e., $p(t | h, r) = 1/|\mathcal{N}_{h}^{r}|$. Consequently, the entropy formula simplifies to the logarithmic form of the branching factor, directly measuring the dispersion of neighbors. The global entropy for relation \(r\) is obtained by averaging over all associated heads \(\mathcal{H}_r\):
+\begin{equation}
+	H(r) = \frac{1}{|\mathcal{H}_r|} \sum\nolimits_{h \in \mathcal{H}_r} \log |\mathcal{N}_{h}^{r}|.
+\end{equation}
+We then define a structural prior score as the normalized inverse entropy:
+\begin{equation}
+	S_{\text{prior}}(r) = 1 - \frac{H(r)}{\max_{r' \in \mathcal{R}} H(r')}.
+\end{equation}
+This score reflects the ``purity" of a relation: a lower \(H(r)\) indicates a tendency for ``one-to-one" or ``one-to-few" connections, warranting higher prior confidence.
+
+\subsubsection{\textbf{Semantic Posterior Scoring}}
+
+
+While the entropy prior provides valuable global guidance, it operates at the relation level and may overlook the semantic importance of individual triplets. For instance, even within a high-entropy relation like ``also\_bought'', certain specific item pairs may convey strong co-preference signals. To capture such instance-level nuances, we introduce a learnable posterior based on a relational graph attention mechanism.
+
+%While the structural prior offers valuable global guidance, it operates at the relation level and may overlook the semantic importance of individual triplets. For instance, even within a high-entropy relation like ``also\_bought'', certain specific connections may still convey strong preference signals. To capture such nuances, we introduce a learnable posterior that evaluates each triplet $(h, r, t)$ individually via a relational graph attention mechanism.
+
+Given entity embeddings $\mathbf{e}_h, \mathbf{e}_t \in \mathbb{R}^d$ and relation embedding $\mathbf{e}_r \in \mathbb{R}^d$, where $d$ is the embedding dimension, we compute a compatibility score via a learnable transformation $\mathbf{W}_g \in \mathbb{R}^{d \times 2d}$:
+\begin{equation}
+	\label{eq:triplet_score}
+	\pi(h, r, t) = \left( \mathbf{W}_g [\mathbf{e}_h \| \mathbf{e}_t] \right)^\top \mathbf{e}_r,
+\end{equation}
+where $[\cdot \| \cdot]$ denotes concatenation. The posterior score is obtained by applying a non-linear activation followed by normalization:
+\begin{equation}
+	S_{\text{post}}(h, r, t) = \text{Norm} \left( \text{LeakyReLU}(\pi(h, r, t)) \right),
+\end{equation}
+where $\text{Norm}(\cdot)$ is a normalization function (e.g., Sigmoid) that maps the score to $(0,1)$. This score dynamically captures the semantic plausibility of the triplet under the current model parameters.
+
+\subsubsection{\textbf{Adaptive Structure Pruning}}
+At the start of each training epoch, we fuse the prior and posterior scores to obtain a comprehensive quality assessment for each triplet:
+\begin{equation}
+	S_{\text{final}}(h, r, t) = (1 - \alpha) \cdot S_{\text{prior}}(r) + \alpha \cdot S_{\text{post}}(h, r, t),
+\end{equation}
+where $\alpha \in [0,1]$ is a balancing coefficient. This design treats the entropy prior as soft guidance rather than a hard filter---triplets from high-entropy relations can still survive if their learned semantic score is high, preventing the indiscriminate removal of valuable connections. To flexibly control the filtering intensity, we adopt a ratio-based retention strategy. Given a retention rate hyperparameter $\rho \in (0, 1]$, we sort all triplets in descending order based on $S_{\text{final}}$ and retain only the top $K = \lfloor \rho \cdot |\mathcal{G}_{kg}| \rfloor$ triplets to form the refined graph $\tilde{\mathcal{G}}_{kg}$:
+\begin{equation}
+\tilde{\mathcal{G}}_{kg} = \text{TopK}(\mathcal{G}_{kg}, K).
+\end{equation}
+This adaptive mechanism reinforces task-relevant connections based on integrated scores, providing a high-quality graph foundation for subsequent representation learning.
+
+\subsection{Decoupled Dual-View Encoder}
+To prevent structural noise from the KG from contaminating collaborative signals—a common issue in cascaded architectures—we propose a Decoupled Dual-View Encoder. This module processes the User-Item (UI) graph and the refined KG in parallel, extracting complementary signals while maintaining explicit isolation between the two representation spaces.
+
+We maintain two embedding tables: user embeddings $\mathbf{E}_u \in \mathbb{R}^{|\mathcal{U}| \times d}$ and  entity embeddings $\mathbf{E}_e \in \mathbb{R}^{|\mathcal{E}| \times d}$. Since items are a subset of entities ($\mathcal{I} \subseteq \mathcal{E}$), item embeddings are  indexed directly from $\mathbf{E}_e$, ensuring semantic consistency across both views.
+
+\subsubsection{\textbf{Collaborative View Encoder}}
+We employ a LightGCN~\cite{he2020lightgcn} backbone to capture collaborative signals on $\mathcal{G}_{ui}$. The propagation at layer $l$ is defined as:
+\begin{equation}
+	\mathbf{e}_u^{(l)} = \sum_{i \in \mathcal{N}_u} \frac{\mathbf{e}_i^{(l-1)}}{\sqrt{|\mathcal{N}_u| |\mathcal{N}_i|}}, \quad \mathbf{e}_i^{(l)} = \sum_{u \in \mathcal{N}_i} \frac{\mathbf{e}_u^{(l-1)}}{\sqrt{|\mathcal{N}_i| |\mathcal{N}_u|}},
+\end{equation}
+where $\mathcal{N}_u$ and $\mathcal{N}_i$ denote the neighbor sets in $\mathcal{G}_{ui}$. After $L_{cf}$ layers, we obtain the collaborative representation $\mathbf{e}^{cf}$.
+
+For contrastive augmentation, we adopt Sign-Preserving Noise Perturbation inspired by SimGCL~\cite{yu2022graph}. Instead of risky edge-dropping on sparse graphs, this method injects controlled noise directly into the embedding space while preserving the sign of original vectors to maintain semantic consistency:
+\begin{equation}
+	\mathbf{E}^{(l)}_{\text{aug}} = \tilde{\mathbf{A}}_{ui} \left( \mathbf{E}^{(l-1)} + \epsilon \cdot \text{sign}(\mathbf{E}^{(l-1)}) \odot \boldsymbol{\Delta} \right),
+\end{equation}
+where $\tilde{\mathbf{A}}_{ui}$ is the symmetrically normalized adjacency matrix of $\mathcal{G}_{ui}$, $\boldsymbol{\Delta} \sim \mathcal{U}(0, 1)$ denotes a uniform noise matrix, and $\epsilon$ controls the perturbation magnitude. This yields the augmented view $\tilde{\mathbf{e}}^{cf}$ for robust alignment.
+
+\subsubsection{\textbf{Semantic View Encoder}}
+To capture high-order attributes, we deploy a Relational Graph Attention Network (RGAT)~\cite{yang2022knowledge,wang2019kgat} on the refined graph $\tilde{\mathcal{G}}_{kg}$ (from ESL). Starting from  $\mathbf{E}_e$, attention coefficients $\alpha_{hrt}^{(l)}$ are derived by normalizing the compatibility scores $\pi(h, r, t)$ (Eq.~\eqref{eq:triplet_score}) via softmax.
+Entity representations are recursively updated by aggregating neighbor information:
+\begin{equation}
+	\mathbf{e}_h^{(l)} = \mathbf{e}_h^{(l-1)} + \sum\nolimits_{(h,r,t) \in \tilde{\mathcal{G}}_{kg}} \alpha_{hrt}^{(l)} \cdot \mathbf{e}_t^{(l-1)}.
+\end{equation}
+Stacking $L_{kg}$ layers yields the semantic representation $\mathbf{e}^{kg}$.
+
+For augmentation, we propose Stochastic Semantic Masking (SSM). To avoid breaking critical sparse connections via edge dropping, SSM perturbs the information flow in the latent space by applying a Bernoulli mask $\mathbf{M}^{(l)} \sim \text{Bernoulli}(1-p)$ to aggregated features, where $p$ denotes the dropout probability:
+\begin{equation}
+	\tilde{\mathbf{e}}_h^{(l)} = \mathbf{e}_h^{(l-1)} + \left( \sum_{(h,r,t) \in \tilde{\mathcal{G}}_{kg}} \alpha_{hrt}^{(l)} \cdot \mathbf{e}_t^{(l-1)} \right) \odot \mathbf{M}^{(l)}.
+\end{equation}
+This forces the model to reconstruct semantics from partial cues, producing the augmented view $\tilde{\mathbf{e}}^{kg}$ robust to specific noise patterns.
+\subsection{Flow Matching Representation Refinement}
+Despite the preceding modules, item embeddings may still suffer from residual noise or sub-optimal positioning due to GNN over-smoothing and KG sparsity. We address this by reframing representation learning as a continuous denoising and refinement process. Inspired by Flow Matching (FM)~\cite{lipman2023flow}, we model the evolution from a simple noise distribution to a target high-quality embedding distribution via a deterministic ODE, offering superior stability and efficiency compared to diffusion models.
+
+%Despite the effective feature extraction by entropy-guided structure learning and the dual-view encoder, the inevitable over-smoothing issue in graph convolution and the inherent long-tail distribution of KGs may still render the final item embeddings susceptible to latent noise or leave them in a sub-optimal representation space. We address this issue by modeling item representation refinement as a continuous dynamic evolution process from a simple noise distribution to a high-quality semantic distribution.
+%
+%Inspired by recent advances in generative modeling, we introduce FM~\cite{lipman2023flow}. Unlike diffusion models based on SDEs, FM constructs generation trajectories via deterministic ODEs, offering superior training stability and inference efficiency.
+
+\subsubsection{\textbf{Optimal Transport Path Construction}}
+We instantiate a Conditional Flow Matching framework based on OT. During training, we pair a source noise sample \(\mathbf{x}_0 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})\) with a target semantic embedding \(\mathbf{x}_1 = \mathbf{e}_i^{kg}\). The OT path defines a straight-line interpolation and its corresponding conditional vector field:
+\begin{equation}
+	\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\mathbf{x}_1, \quad \mathbf{u}_t(\mathbf{x}_t | \mathbf{x}_1) = \mathbf{x}_1 - \mathbf{x}_0,
+\end{equation}
+for \(t \in [0,1]\). This simplifies the learning target to a constant displacement vector pointing from noise to the semantic proxy.
+
+\subsubsection{\textbf{Vector Field Estimator and Training}}
+To approximate the ideal vector field, we introduce a parameterized neural network $\text{FlowNet}$, denoted as $\mathbf{v}_t(\mathbf{x}; \theta)$, where $\theta$ represents the network parameters. To incorporate temporal information, we first map the scalar time step $t$ to a high-dimensional time embedding $\mathbf{t}_{\text{emb}}$ via sinusoidal positional encoding and MLP projection. Then, we concatenate this time vector with the current noisy state $\mathbf{x}_t$ and feed the result into an MLP to predict the velocity field:
+\begin{equation}
+	\mathbf{v}_t(\mathbf{x}_t; \theta) = \text{MLP}([\mathbf{x}_t \| \mathbf{t}_{\text{emb}}]; \theta).
+\end{equation}
+The model is trained to regress the true displacement using the Conditional Flow Matching loss:
+\begin{equation}
+	\mathcal{L}_{\text{fm}} = \mathbb{E}_{t, \mathbf{x}_0, \mathbf{x}_1} \left[ \| \mathbf{v}_t(\mathbf{x}_t; \theta) - (\mathbf{x}_1 - \mathbf{x}_0) \|^2 \right].
+\end{equation}
+\subsubsection{\textbf{Euler Integration Strategy}}
+A key insight of our approach is the dual role of $\mathbf{e}_i^{kg}$: during training, it serves as the target state $\mathbf{x}_1$ to supervise the vector field; during inference, it is re-interpreted as an intermediate state $\mathbf{x}_{t_{\text{start}}}$ on the OT path. This design is motivated by the observation that while $\mathbf{e}_i^{kg}$ captures useful semantics, it may still contain residual noise from the KG. By treating it as a ``partially evolved'' state rather than the final destination, we allow the learned vector field to further refine it toward a higher-quality manifold.
+
+Concretely, we set the initial condition as $\mathbf{x}_{t_{\text{start}}} = \mathbf{e}_i^{kg}$ and integrate from $t_{\text{start}}$ to $t=1$ using the Euler Method. Discretizing this interval into $N$ steps, the update rule is:
+\begin{equation}
+	\mathbf{x}_{t_{n+1}} = \mathbf{x}_{t_n} + \mathbf{v}_{t_n}(\mathbf{x}_{t_n}; \theta) \cdot (t_{n+1} - t_n).
+\end{equation}
+To balance computational cost and refinement quality, we adopt an adaptive step strategy: during training, we set $N=1$ for single-step refinement to ensure efficient gradient backpropagation; during inference, we can flexibly increase $N$ to obtain a finer manifold evolution trajectory. The final $\mathbf{x}_1$ obtained at time $t=1$ serves as the refined semantic representation $\mathbf{e}_i^{\text{refined}}$.
+
+\subsection{Prediction and Optimization}
+
+\subsubsection{\textbf{Representation Fusion and Prediction}}
+To integrate the generative refinement into the recommendation task, we fuse the collaborative embedding $\mathbf{e}_i^{cf}$ and the flow-refined semantic embedding $\mathbf{e}_i^{\text{refined}}$ (computed via a single Euler step $N=1$ for efficient gradient feedback) via summation: $\mathbf{e}_i = \mathbf{e}_i^{cf} + \mathbf{e}_i^{\text{refined}}$.
+The user preference score is calculated as the inner product $\hat{y}_{ui} = {\mathbf{e}_u^{cf}}^\top \mathbf{e}_i$.
+We employ the Bayesian Personalized Ranking (BPR) loss~\cite{rendle2012bpr} as the primary objective to maximize the margin between observed and unobserved interactions:
+\begin{equation}
+	\mathcal{L}_{\text{BPR}} = - \sum\nolimits_{(u, i, j) \in \mathcal{D}} \ln \sigma(\hat{y}_{ui} - \hat{y}_{uj}),
+\end{equation}
+where $\mathcal{D}$ denotes the training set of triplets $(u, i, j)$, with $i$ being the observed item and $j$ being the sampled negative item.
+
+\subsubsection{\textbf{Dual-Level Contrastive Learning}}
+To enhance robustness, we perform contrastive learning on both user and item views.
+For users, we align $\mathbf{e}_u^{cf}$ with its augmented view $\tilde{\mathbf{e}}_u^{cf}$; for items, we align the fused embedding $\mathbf{e}_i$ with its flow-augmented counterpart $\tilde{\mathbf{e}}_i$.  
+We adopt the InfoNCE loss~\cite{oord2018representation} to maximize the mutual information of positive pairs:
+\begin{equation}
+	\mathcal{L}_{\text{cl}} = - \sum\nolimits_{x \in \mathcal{B}} \ln \frac{\exp(\text{sim}(\mathbf{e}_x, \tilde{\mathbf{e}}_x) / \tau)}{\sum_{y \in \mathcal{B}} \exp(\text{sim}(\mathbf{e}_x, \tilde{\mathbf{e}}_y) / \tau)},
+\end{equation}
+where $\mathcal{B}$ denotes the batch, $\text{sim}(\cdot, \cdot)$ is cosine similarity, and $\tau$ is temperature. We analyze the asymptotic behavior as \(\tau \to \infty\), where the objective converges to a Mean Difference (MD) loss~\cite{wang2021understanding}:
+\begin{equation}
+	\label{eq:md_loss}
+	\mathcal{L}_{\text{md}} \propto \mathbb{E}_{x \in \mathcal{B}} \left[ \mathbb{E}_{y \in \mathcal{B}} [\text{sim}(\mathbf{e}_x, \tilde{\mathbf{e}}_y)] - \text{sim}(\mathbf{e}_x, \tilde{\mathbf{e}}_x) \right].
+\end{equation}
+As evidenced in ~\cite{wang2021understanding}, this global alignment strategy is theoretically more robust against false negatives in sparse data scenarios.
+
+\subsubsection{\textbf{Multi-Task Objective}}
+The final objective jointly optimizes recommendation, generation, and self-supervised alignment:
+\begin{equation}
+	\mathcal{L} = \mathcal{L}_{\text{BPR}} + \lambda_{\text{fm}} \mathcal{L}_{\text{fm}} + \lambda_{u} \mathcal{L}_{\text{cl}}^u + \lambda_{i} \mathcal{L}_{\text{cl}}^i + \lambda_{\text{reg}} \|\Theta\|_2^2,
+\end{equation}
+where $\Theta$ denotes all learnable parameters (including $\theta$ in FlowNet), and $\lambda_{u}$, $\lambda_{i}$, $\lambda_{\text{fm}}$, $\lambda_{\text{reg}}$ are  balancing hyperparameters. During inference, we discard the contrastive branch and utilize the trained FlowNet with flexible steps for high-quality refinement.
+
+
+
+
+%\newpage
+%\subsection{Decoupled Dual-View Encoder}
+%Conventional knowledge-aware recommendation methods typically rely on \textit{cascaded architectures}, where item embeddings are first enriched via KG aggregation and subsequently propagated through the user-item graph. However, this tight coupling inevitably propagates and amplifies inherent structural noise from the KG into the collaborative signal, thereby degrading recommendation performance. To address this, we propose a Decoupled Dual-View Encoder. This module processes the user-item interaction graph (Collaborative View) and the knowledge graph (Semantic View) in parallel, extracting complementary representations while strictly insulating the collaborative learning process from direct KG noise interference.
+%
+%\subsubsection{\textbf{Collaborative View Encoder}}
+%The collaborative view is designed to capture high-order collaborative signals from the user-item bipartite graph $\mathcal{G}_{ui}$. Following the minimalist design of LightGCN~\cite{he2020lightgcn}, we employ a lightweight graph convolutional network (GCN) as the backbone, removing burdensome feature transformations and non-linear activations.
+%Crucially, to prevent potential KG noise from contaminating the collaborative space, we initialize item features with independent ID embeddings $\mathbf{E}^{(0)} \in \mathbb{R}^{N \times d}$ rather than reusing KG-derived embeddings. We perform standard graph convolution to generate the base view. At the $l$-th layer, the user and item embeddings are updated as follows:
+%\begin{equation}
+%	\mathbf{e}_u^{(l)} = \sum_{i \in \mathcal{N}_u} \frac{\mathbf{e}_i^{(l-1)}}{\sqrt{|\mathcal{N}_u| |\mathcal{N}_i|}}, \quad \mathbf{e}_i^{(l)} = \sum_{u \in \mathcal{N}_i} \frac{\mathbf{e}_u^{(l-1)}}{\sqrt{|\mathcal{N}_i| |\mathcal{N}_u|}},
+%\end{equation}
+%where $\mathcal{N}_u$ and $\mathcal{N}_i$ denote the neighbor sets of user $u$ and item $i$, respectively. After stacking $L_{cf}$ propagation layers, we obtain the final collaborative representations, denoted as $\mathbf{e}^{cf} = \mathbf{e}^{(L_{cf})}$.
+%
+%To construct the augmented view for contrastive learning, we introduce a controlled noise perturbation strategy. Unlike structural perturbations (e.g., edge dropout) that may fracture sparse interaction graphs, embedding-level noise injection offers greater efficiency and stability. To preserve semantic consistency, we constrain the noise to strictly maintain the sign of the original embeddings, ensuring the augmented vectors remain within the same hyper-quadrant. Specifically, at each layer, the augmented representation is computed as:
+%\begin{equation}
+%	\mathbf{E}^{(l)}_{\text{aug}} = \tilde{\mathbf{A}}_{ui} \left( \mathbf{E}^{(l-1)} + \epsilon \cdot \text{sign}(\mathbf{E}^{(l-1)}) \odot \Delta \right),
+%\end{equation}
+%where $\Delta \sim \mathcal{U}(0, 1)^{N \times d}$ is a uniform random noise matrix, $\epsilon$ controls the perturbation magnitude, and $\odot$ is the Hadamard product. This strategy introduces necessary variance for contrastive alignment while preserving the integrity of the collaborative signals, yielding the augmented view $\tilde{\mathbf{e}}^{cf}$.
+%
+%\subsubsection{\textbf{Semantic View Encoder}}
+%The semantic view focuses on extracting high-order attribute features by propagating information over the refined knowledge graph $\tilde{\mathcal{G}}_{kg}$ (produced by the ESL module). To capture deep semantic dependencies beyond immediate neighbors, we employ a Relational Graph Attention Network (RGAT).
+%
+%Analogous to the collaborative view, we perform recursive embedding propagation. We initialize entity representations as $\mathbf{e}_h^{(0)} = \mathbf{e}_h$. At the $l$-th layer, we first compute the normalized attention coefficients for each triplet $(h, r, t) \in \tilde{\mathcal{G}}_{kg}$ utilizing the compatibility score $\pi(h, r, t)$ (defined in Section 3.2.2):
+%\begin{equation}
+%	\alpha_{hrt}^{(l)} = \frac{\exp(\text{LeakyReLU}(\pi(h, r, t)))}{\sum_{t' \in \mathcal{N}_h^r} \exp(\text{LeakyReLU}(\pi(h, r, t')))},
+%\end{equation}
+%where $\mathcal{N}_h^r$ denotes the set of tail entities connected to head entity $h$ via relation $r$. Subsequently, we aggregate the neighbor information from the $(l-1)$-th layer to update the head entity representation:
+%\begin{equation}
+%	\mathbf{e}_h^{(l)} = \mathbf{e}_h^{(l-1)} + \sum_{(h,r,t) \in \tilde{\mathcal{G}}_{kg}} \alpha_{hrt}^{(l)} \cdot \mathbf{e}_t^{(l-1)}.
+%\end{equation}
+%After performing $L_{kg}$ layers of recursive propagation, we obtain the final semantic representation, denoted as $\mathbf{e}^{kg} = \mathbf{e}^{(L_{kg})}$, which encodes the comprehensive high-order semantic context.
+%
+%For the augmented semantic view, we propose a Stochastic Semantic Masking (SSM) strategy. Considering that dropping edges in a sparse KG might sever critical semantic connections, SSM perturbs the information flow directly in the latent space while keeping the topology intact. During aggregation at the $l$-th layer, we introduce a Bernoulli mask $\mathcal{M}^{(l)} \sim \text{Bernoulli}(1-p)$ to randomly drop dimensions of the aggregated features:
+%\begin{equation}
+%	\tilde{\mathbf{e}}_h^{(l)} = \mathbf{e}_h^{(l-1)} + \left( \sum_{(h,r,t) \in \tilde{\mathcal{G}}_{kg}} \alpha_{hrt}^{(l)} \cdot \mathbf{e}_t^{(l-1)} \right) \odot \mathcal{M}^{(l)}.
+%\end{equation}
+%This process yields the augmented semantic representation $\tilde{\mathbf{e}}^{kg}$. By compelling the model to reconstruct representations from partial semantic cues, SSM effectively prevents overfitting to specific noise patterns and enhances the robustness of the learned entity embeddings.

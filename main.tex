@@ -1,0 +1,65 @@
+\documentclass[letterpaper]{article} % DO NOT CHANGE THIS
+\usepackage[submission]{aaai2027}  % DO NOT CHANGE THIS
+\usepackage[hyphens]{url}  % DO NOT CHANGE THIS
+\usepackage{graphicx} % DO NOT CHANGE THIS
+\urlstyle{rm} % DO NOT CHANGE THIS
+\def\UrlFont{\rm}  % DO NOT CHANGE THIS
+\usepackage{natbib}  % DO NOT CHANGE THIS AND DO NOT ADD ANY OPTIONS TO IT
+\usepackage{caption} % DO NOT CHANGE THIS AND DO NOT ADD ANY OPTIONS TO IT
+\frenchspacing  % DO NOT CHANGE THIS
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{subcaption}
+\usepackage{tabularx}
+\usepackage{listings}
+\usepackage{multirow}
+\usepackage{booktabs}
+
+\pdfinfo{
+/TemplateVersion (2027.1)
+}
+
+\setcounter{secnumdepth}{0}
+
+\title{FlowKG: Generative Knowledge Graph Refinement via Flow Matching for Recommendation}
+\author{Anonymous Submission}
+\affiliations{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+	Incorporating Knowledge Graphs (KGs) into recommender systems has become a de facto standard for alleviating data sparsity and the cold-start problem. While Graph Neural Networks have shown success in this domain, current approaches face two critical bottlenecks. First, prevalent cascaded architectures tightly couple the KG and user-item graphs, inevitably amplifying inherent structural noise (e.g., high-entropy ``one-to-many'' relations) and propagating it into user preference modeling. Second, while generative recommendation has gained traction, existing diffusion-based methods rely on Stochastic Differential Equations (SDEs) to generate discrete graph structures. This process is not only computationally demanding but also indirect, as the ultimate goal is to refine latent representations rather than graph topology. To address these challenges, we propose FlowKG, a novel framework that integrates Decoupled Structure Learning with Flow Matching (FM) for robust and efficient recommendation. We introduce an Entropy-Guided Structure Learning module that combines structural entropy priors with learnable semantic posteriors to adaptively assess triplet quality before aggregation, ensuring high-fidelity input for a Decoupled Dual-View Encoder. Furthermore, we shift the generative paradigm from SDE-based diffusion to FM. By constructing deterministic Ordinary Differential Equation trajectories based on Optimal Transport, FlowKG evolves noisy item embeddings directly towards the target semantic manifold along straight, stable paths. We conduct extensive experiments on four publicly available datasets, consistently demonstrating the superiority of our FlowKG compared to various competitive baselines. Our code is available at \url{https://anonymous.4open.science/r/FlowKG}.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+\input{section/introduction.tex}
+
+\section{Related work}
+\label{sec:relatedwork}
+\input{section/relatedwork.tex}
+
+\section{Preliminaries}
+\label{sec:preliminaries}
+\input{section/preliminaries.tex}
+
+\section{Methodology}
+\label{sec:method}
+\input{section/method.tex}
+
+\section{Experiment}
+\label{sec:experiment}
+\input{section/experiment.tex}
+
+\section{Conclusion}
+\label{sec:conclusion}
+\input{section/conclusion.tex}
+
+\bibliography{sigir2026}
+
+\end{document}

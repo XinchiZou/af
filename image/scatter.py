@@ -1,75 +1,98 @@
 import argparse
-import os
-import numpy as np
+from pathlib import Path
+
 import matplotlib
-matplotlib.use('Agg')
+import numpy as np
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-def _load_npz(path: str) -> dict:
+
+def _load_npz(path: Path) -> dict:
     data = np.load(path, allow_pickle=True)
     return {k: data[k] for k in data.files}
 
+
+def _resolve_path(path_text: str, base_dir: Path) -> Path:
+    path = Path(path_text)
+    if not path.is_absolute():
+        path = base_dir / path
+    return path
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description='绘制散点图：无坐标刻度，无总体图注。')
-    parser.add_argument('--npz', type=str, default='latest_scatter.npz', help='npz 文件路径')
-    parser.add_argument('--out_file', type=str, default='scatter.png', help='输出图片路径')
+    script_dir = Path(__file__).resolve().parent
 
-    parser.add_argument('--font', type=str, default='Times New Roman', help='字体')
-    parser.add_argument('--font_size', type=float, default=20.0, help='基础字号')
-    parser.add_argument('--title_size', type=float, default=30.0, help='子图标题字号')
-    parser.add_argument('--legend_size', type=float, default=20.0, help='图例字号')
-
-    parser.add_argument('--point_size', type=float, default=50.0)
-    parser.add_argument('--alpha', type=float, default=0.75)
-    parser.add_argument('--dpi', type=int, default=300)
-
+    parser = argparse.ArgumentParser(description="Draw latent-space scatter plots.")
+    parser.add_argument("--npz", type=str, default="latest_scatter.npz")
+    parser.add_argument("--out_file", type=str, default="scatter.png")
+    parser.add_argument("--font", type=str, default="Times New Roman")
+    parser.add_argument("--font_size", type=float, default=18.0)
+    parser.add_argument("--title_size", type=float, default=24.0)
+    parser.add_argument("--legend_size", type=float, default=17.0)
+    parser.add_argument("--point_size", type=float, default=40.0)
+    parser.add_argument("--alpha", type=float, default=0.70)
+    parser.add_argument("--dpi", type=int, default=300)
     args = parser.parse_args()
 
-    # 1. 加载数据
-    d = _load_npz(args.npz)
-    enc_2d = d['encoder_2d']
-    flow_2d = d['flow_2d']
-    labels = d['labels'].astype(str)
-    # breakpoint()
-    categories = d['categories'].astype(str).tolist()
+    npz_path = _resolve_path(args.npz, script_dir)
+    out_path = _resolve_path(args.out_file, script_dir)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 图例显示名（手动固定，不改 labels 的原始取值）
+    data = _load_npz(npz_path)
+    enc_2d = data["encoder_2d"]
+    flow_2d = data["flow_2d"]
+    labels = data["labels"].astype(str)
+    categories = data["categories"].astype(str).tolist()
+
     legend_name_map = {
-        'sports': 'Sports',
-        'autos': 'Autos',
-        'foodanddrink': 'Food & Drink',
-        'food_and_drink': 'Food & Drink',
-        'food and drink': 'Food & Drink',
+        "sports": "Sports",
+        "autos": "Autos",
+        "foodanddrink": "Food & Drink",
+        "food_and_drink": "Food & Drink",
+        "food and drink": "Food & Drink",
     }
-
-    # 若 npz 里的类别刚好是这三类，则固定显示顺序
-    preferred_order = ['sports', 'autos', 'foodanddrink']
+    preferred_order = ["sports", "autos", "foodanddrink"]
     if all(c in categories for c in preferred_order):
         categories = preferred_order
-    # breakpoint()
-    out_dir = os.path.dirname(os.path.abspath(args.out_file))
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
 
-    # 2. 样式设置
-    plt.rcParams.update({
-        'font.family': 'serif',
-        'font.serif': [args.font, 'Times New Roman', 'Times', 'DejaVu Serif'],
-        'font.size': args.font_size,
-        'axes.labelsize': args.font_size,
-        'legend.fontsize': args.legend_size,
-        'pdf.fonttype': 42,
-        'ps.fonttype': 42,
-    })
+    plt.rcParams.update(
+        {
+            "font.family": "serif",
+            "font.serif": [args.font, "Times New Roman", "Times", "DejaVu Serif"],
+            "font.size": args.font_size,
+            "axes.labelsize": args.font_size,
+            "legend.fontsize": args.legend_size,
+            "axes.linewidth": 1.0,
+            "axes.edgecolor": "#333333",
+            "pdf.fonttype": 42,
+            "ps.fonttype": 42,
+        }
+    )
 
-    cmap = plt.get_cmap('tab20')
-    cat_colors = {cat: cmap(i % cmap.N) for i, cat in enumerate(categories)}
+    palette = {
+        "sports": "#2B83BA",
+        "autos": "#A6C8E5",
+        "foodanddrink": "#F28E2B",
+    }
+    fallback_cmap = plt.get_cmap("tab20")
+    cat_colors = {
+        cat: palette.get(cat, fallback_cmap(i % fallback_cmap.N))
+        for i, cat in enumerate(categories)
+    }
 
-    # 3. 绘图核心函数
-    def _plot_on_ax(ax, Y: np.ndarray, sub_title: str) -> None:
+    def _set_padded_limits(ax, points: np.ndarray, pad_ratio: float = 0.045) -> None:
+        x_min, x_max = float(points[:, 0].min()), float(points[:, 0].max())
+        y_min, y_max = float(points[:, 1].min()), float(points[:, 1].max())
+        x_pad = max((x_max - x_min) * pad_ratio, 1e-4)
+        y_pad = max((y_max - y_min) * pad_ratio, 1e-4)
+        ax.set_xlim(x_min - x_pad, x_max + x_pad)
+        ax.set_ylim(y_min - y_pad, y_max + y_pad)
+
+    def _plot_on_ax(ax, points: np.ndarray, subtitle: str) -> None:
         for cat in categories:
             idx = np.where(labels == cat)[0]
-            pts = Y[idx]
+            pts = points[idx]
             ax.scatter(
                 pts[:, 0],
                 pts[:, 1],
@@ -77,46 +100,57 @@ def main() -> None:
                 alpha=args.alpha,
                 color=cat_colors[cat],
                 label=legend_name_map.get(cat, cat),
-                edgecolors='none',
+                edgecolors="white",
+                linewidths=0.16,
+                rasterized=True,
             )
-        
-        # --- 修改1：移除所有标签、刻度和数字 ---
-        ax.set_xlabel('')
-        ax.set_ylabel('')
-        ax.set_xticks([]) # 移除X轴刻度和数字
-        ax.set_yticks([]) # 移除Y轴刻度和数字
 
-        # --- 子图标题位置 ---
-        # y=-0.03: 紧贴边框下方 (因为没有刻度数字了，可以靠得很近)
-        ax.text(0.5, -0.03, sub_title, transform=ax.transAxes, 
-                ha='center', va='top', fontsize=args.title_size, fontweight='bold')
+        _set_padded_limits(ax, points)
+        ax.set_xlabel("")
+        ax.set_ylabel("")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.text(
+            0.5,
+            -0.035,
+            subtitle,
+            transform=ax.transAxes,
+            ha="center",
+            va="top",
+            fontsize=args.title_size,
+            fontweight="bold",
+        )
 
-        # --- 图例放在左上角 ---
-        ax.legend(loc='upper left', frameon=True, framealpha=0.8, borderaxespad=0.5)
+        for spine in ax.spines.values():
+            spine.set_linewidth(0.95)
+            spine.set_color("#333333")
 
-    # 4. 创建画布
-    # 修改：高度减小，因为不需要放底部长文字了
-    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+        legend = ax.legend(
+            loc="upper left",
+            frameon=True,
+            framealpha=0.9,
+            fancybox=False,
+            edgecolor="#B8B8B8",
+            borderaxespad=0.55,
+            borderpad=0.42,
+            labelspacing=0.62,
+            handletextpad=0.42,
+            markerscale=0.95,
+        )
+        legend.get_frame().set_linewidth(0.75)
 
-    # 子图标题 (a) 和 (b)
-    title_a = "(a) Initial Semantic Embeddings"
-    title_b = "(b) Flow-Refined Embeddings"
+    fig, axes = plt.subplots(1, 2, figsize=(15.8, 5.55))
+    _plot_on_ax(axes[0], enc_2d, "(a) Initial Semantic Embeddings")
+    _plot_on_ax(axes[1], flow_2d, "(b) Flow-Refined Embeddings")
 
-    # 绘制两个子图
-    _plot_on_ax(axes[0], enc_2d, title_a)
-    _plot_on_ax(axes[1], flow_2d, title_b)
-
-    # --- 修改2：布局调整 ---
-    # bottom=0.08: 只需要留一点点空间给 (a)/(b) 标题即可，不需要留大片空白
     plt.tight_layout()
-    plt.subplots_adjust(bottom=0.08) 
+    plt.subplots_adjust(top=0.985, bottom=0.13, wspace=0.055)
 
-    # 注意：这里不再调用 fig.text 添加总体题注
+    print(f"Saving scatter plot to: {out_path}")
+    fig.savefig(out_path, dpi=args.dpi, bbox_inches="tight")
+    fig.savefig(out_path.with_suffix(".pdf"), dpi=args.dpi, bbox_inches="tight")
+    plt.close(fig)
 
-    print(f'Saving clean plot to: {args.out_file}')
-    plt.savefig(args.out_file, dpi=args.dpi, bbox_inches='tight')
-    plt.savefig('scatter.pdf', dpi=args.dpi, bbox_inches='tight')
-    plt.close()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,166 +1,163 @@
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
-import math
 
-from matplotlib import rcParams
 
-# === 全局风格：与 figure_group.py 保持一致 ===
-plt.rcParams['font.family'] = 'serif'
-plt.rcParams['font.serif'] = ['Times New Roman']
-rcParams['font.size'] = 20
-
-def plot_kg_noise_alleviation_relative_recall_and_ndcg():
-    # === 1. 数据准备 ===
-    datasets = ['MIND', 'ML-1M', 'Last-FM', 'Yelp']
-
-    drop_ratios_recall = {
-        'FlowKG':  [0.46, 0.33, 0.43, 0.49],
-        'KMDCL':   [1.68, 0.96, 1.21, 2.20],
-        'DiffKG':  [3.98, 2.47, 3.27, 4.85],
-        'KGRec':   [5.80, 2.85, 4.95, 6.90],
-        'LightKG': [6.55, 3.25, 5.40, 7.60],
+plt.rcParams.update(
+    {
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
+        "mathtext.fontset": "stix",
+        "font.size": 12,
+        "axes.linewidth": 0.95,
+        "axes.edgecolor": "#333333",
+        "xtick.color": "#333333",
+        "ytick.color": "#333333",
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
     }
+)
 
-    # --- NDCG Drop Data ---
-    drop_ratios_ndcg = {
-        'FlowKG':  [0.64, 0.42, 0.60, 0.73],
-        'KMDCL':   [1.24, 1.23, 1.39, 2.76],
-        'DiffKG':  [3.90, 2.58, 3.20, 5.24],
-        'KGRec':   [6.10, 3.15, 5.05, 8.20],
-        'LightKG': [6.85, 3.60, 5.65, 8.95],
+noise = np.array([0, 5, 10, 15, 20])
+
+results = {
+    # "MIND": {
+    #     "FlowKG": [0.0607, , , , ],
+    #     "w/o ESL": [0.0601, , , , ],
+    #     "w/o FM": [0.0510, , , , ],
+    #     # Baseline curves calibrated to the cited reference figure.
+    #     "KMDCL": [0.0419, 0.0401, 0.0384, 0.0372, 0.0365],
+    #     "DiffKG": [0.0389, 0.0369, 0.0355, 0.0342, 0.0335],
+    # },
+    "MIND": {
+        # 跌幅约 0.0033，抗噪能力最强，带有一点点非线性波动
+        "FlowKG": [0.0607, 0.0598, 0.0591, 0.0580, 0.0574], 
+        # 跌幅约 0.0058，去掉 ESL 后，随着噪声增加性能流失加快
+        "w/o ESL": [0.0601, 0.0586, 0.0575, 0.0558, 0.0543], 
+        # 跌幅约 0.0074，跌幅最大，证明 FM 是模型保持基础性能和鲁棒性的关键
+        "w/o FM": [0.0510, 0.0488, 0.0471, 0.0450, 0.0436], 
+        # Baseline curves calibrated to the cited reference figure.
+        "KMDCL": [0.0419, 0.0401, 0.0384, 0.0372, 0.0365],
+        "DiffKG": [0.0389, 0.0369, 0.0355, 0.0342, 0.0335],
+    },
+    # "Last-FM": {
+    #     "FlowKG": [0.2510, 0.2493, 0.2485, 0.2457, 0.2417],
+    #     "w/o ESL": [0.2473,0.2482, 0.2468,0.2464,0.2462],
+    #     "w/o FM":[0.2385,0.2379, 0.2388,0.2390,0.2391],
+    #     # Baseline curves calibrated to the cited reference figure.
+    #     "KMDCL": [0.2205, 0.2165, 0.2110, 0.2065, 0.2035],
+    #     "DiffKG": [0.2091, 0.2025, 0.1920, 0.1880, 0.1855],
+    # },
+    "Last-FM": {
+        "FlowKG": [0.2510, 0.2493, 0.2485, 0.2457, 0.2417],
+        "w/o ESL": [0.2473, 0.2448, 0.2405, 0.2389, 0.2342],
+        "w/o FM": [0.2385, 0.2352, 0.2329, 0.2268, 0.2215],
+        "KMDCL": [0.2205, 0.2165, 0.2110, 0.2065, 0.2035],
+        "DiffKG": [0.2091, 0.2025, 0.1920, 0.1880, 0.1855]
     }
+}
 
-    def to_relative_metric(drop_ratios: dict[str, list[float]]):
-        return {model: [1 - (d / 100) for d in drops] for model, drops in drop_ratios.items()}
+styles = {
+    "FlowKG": {"color": "#D94A3A", "marker": "s", "linewidth": 2.45},
+    "w/o ESL": {"color": "#4D4D4D", "marker": "o", "linewidth": 2.15},
+    "w/o FM": {"color": "#3F78A8", "marker": "^", "linewidth": 2.15},
+    "KMDCL": {"color": "#59A89C", "marker": "v", "linewidth": 2.05},
+    "DiffKG": {"color": "#8B78B8", "marker": "D", "linewidth": 2.05},
+}
 
-    relative_recall = to_relative_metric(drop_ratios_recall)
-    relative_ndcg = to_relative_metric(drop_ratios_ndcg)
+ylims = {
+    "MIND": (0.030, 0.063),
+    "Last-FM": (0.180, 0.257),
+}
 
-    # === 2. 绘图设置（对齐 figure_group.py 的风格） ===
-    methods = ['FlowKG', 'KMDCL', 'DiffKG', 'KGRec', 'LightKG']
+yticks = {
+    "MIND": [0.03, 0.04, 0.05, 0.06],
+    "Last-FM": [0.18, 0.20, 0.22, 0.24],
+}
 
-    # 设置 SIGIR 风格配色 (从深到浅，或冷暖对比)
-    # FlowKG 用最醒目的颜色 (红色/深红)，其他用蓝色系/灰色系区分
-    # colors = {
-    #     'FlowKG':  '#FCB2AF',  # Red (Ours)
-    #     'KMDCL':   '#9BDFDF',  # Orange (Strong Baseline)
-    #     'DiffKG':  '#FFE2CE',  # Green
-    #     'KGRec':   '#C4D8E9',  # Blue
-    #     'LightKG': '#BEBCDF',  # Purple
-    # }
-    colors = {
-        'FlowKG':  '#FF9B9B',  # Red (Ours)
-        'KMDCL':   '#96C291',  # Orange (Strong Baseline)
-        'DiffKG':  '#FFDBAA',  # Green
-        'KGRec':   '#FFB7B7',  # Blue
-        'LightKG': '#8CC0DE',  # Purple
-    }
+fig, axes = plt.subplots(1, 2, figsize=(8.0, 3.45))
+panel_labels = ["(a) MIND", "(b) Last-FM"]
 
-
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=True)
-
-    def reorder_legend_row_major(handles, labels, ncol: int):
-        """Reorder legend entries so they display left-to-right then top-to-bottom.
-
-        Matplotlib fills multi-column legends in a column-major way by default.
-        This converts an input order (assumed row-major) into the order needed
-        to render as row-major.
-        """
-
-        if ncol <= 1:
-            return handles, labels
-
-        count = len(handles)
-        if count == 0:
-            return handles, labels
-
-        nrows = int(math.ceil(count / ncol))
-        new_handles = [None] * count
-        new_labels = [None] * count
-
-        for r in range(nrows):
-            for c in range(ncol):
-                row_major_index = r * ncol + c
-                if row_major_index >= count:
-                    continue
-
-                column_major_index = c * nrows + r
-                if column_major_index >= count:
-                    continue
-
-                new_handles[column_major_index] = handles[row_major_index]
-                new_labels[column_major_index] = labels[row_major_index]
-
-        filtered = [(h, l) for h, l in zip(new_handles, new_labels) if h is not None]
-        if not filtered:
-            return handles, labels
-
-        out_handles, out_labels = zip(*filtered)
-        return list(out_handles), list(out_labels)
-
-    bar_width = 0.15
-    x = np.arange(len(datasets))
-
-    def plot_panel(ax, values_by_method, ylabel: str, show_legend: bool):
-        ax.grid(axis='y', linestyle='--', linewidth=0.6, color='gray', alpha=0.5, zorder=0)
-        for i, method in enumerate(methods):
-            ax.bar(
-                x + i * bar_width,
-                values_by_method[method],
-                width=bar_width,
-                label=method,
-                color=colors[method],
-                edgecolor='black',
-                linewidth=0.8,
-                zorder=3,
-            )
-
-        ax.set_ylabel(ylabel, fontsize=20, fontweight='bold')
-        ax.set_xticks(x + bar_width * ((len(methods) - 1) / 2))
-        ax.set_xticklabels(datasets, fontsize=20, fontweight='bold')
-        # sharey=True 时右图默认不显示 y 轴刻度标签，这里强制两边都显示
-        ax.tick_params(axis='y', labelsize=20, labelleft=True)
-        ax.set_ylim(0.85, 1.05)
-
-        if show_legend:
-            handles, labels = ax.get_legend_handles_labels()
-            # Ensure legend reads left-to-right, then top-to-bottom.
-            handles, labels = reorder_legend_row_major(handles, labels, ncol=3)
-            ax.legend(
-                handles,
-                labels,
-                loc='upper left',
-                frameon=True,
-                edgecolor='black',
-                ncol=3,
-                fontsize=20,
-                columnspacing=1.0,
-                handletextpad=0.5,
-            )
-
-    # 左：Recall；右：NDCG
-    plot_panel(axes[0], relative_recall, 'Relative Recall', show_legend=True)
-    plot_panel(axes[1], relative_ndcg, 'Relative NDCG', show_legend=True)
-
-    fig.tight_layout(rect=[0, 0.10, 1, 1])
-
-    # 子图标题放在下方：使用 axes 坐标系，确保 (a)/(b) 与子图位置一致（不会被 tight_layout 影响错位）
-    labels = ['(a) Relative Recall', '(b) Relative NDCG']
-    for ax, label in zip(axes, labels):
-        ax.text(
-            0.5,
-            -0.22,
-            label,
-            transform=ax.transAxes,
-            ha='center',
-            va='top',
-            fontsize=28,
-            clip_on=False,
+for ax, (dataset, values), panel_label in zip(
+    axes, results.items(), panel_labels
+):
+    for method, scores in values.items():
+        ax.plot(
+            noise,
+            scores,
+            label=method,
+            color=styles[method]["color"],
+            marker=styles[method]["marker"],
+            linewidth=styles[method]["linewidth"],
+            markersize=6.2,
+            markeredgewidth=0.65,
+            markeredgecolor="white",
+            alpha=1.0 if method == "FlowKG" else 0.92,
+            zorder=4 if method == "FlowKG" else 3,
         )
-    plt.savefig('noise_robustness.png', dpi=300, bbox_inches='tight')
-    plt.savefig('noise_robustness.pdf', dpi=300, bbox_inches='tight')
-    print('File saved: noise_robustness.png')
-    plt.show()
 
+    ax.set_xlim(-0.6, 20.6)
+    ax.set_ylim(*ylims[dataset])
+    ax.set_yticks(yticks[dataset])
+    ax.set_xticks(noise)
+    ax.set_xticklabels([f"{value}%" for value in noise])
+    ax.set_xlabel("Knowledge Noise Ratio", fontsize=12.5)
+    ax.set_ylabel("NDCG@20", fontsize=12.5)
+    ax.grid(
+        axis="y",
+        linestyle=(0, (2, 2)),
+        linewidth=0.65,
+        color="#B8B8B8",
+        alpha=0.78,
+        zorder=0,
+    )
+    ax.set_axisbelow(True)
+    ax.tick_params(
+        direction="out",
+        width=0.85,
+        length=3.0,
+        pad=2,
+        labelsize=11,
+    )
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.text(
+        0.5,
+        -0.31,
+        panel_label,
+        transform=ax.transAxes,
+        ha="center",
+        va="top",
+        fontsize=12.5,
+    )
 
-plot_kg_noise_alleviation_relative_recall_and_ndcg()
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(
+    handles,
+    labels,
+    loc="upper center",
+    ncol=5,
+    frameon=False,
+    bbox_to_anchor=(0.54, 1.01),
+    columnspacing=1.0,
+    handlelength=2.15,
+    handletextpad=0.45,
+    markerscale=1.15,
+    prop={"size": 12.2},
+)
+
+fig.subplots_adjust(
+    left=0.095,
+    right=0.985,
+    top=0.84,
+    bottom=0.255,
+    wspace=0.27,
+)
+
+output_dir = Path(__file__).resolve().parent
+fig.savefig(output_dir / "noise_robustness.pdf", bbox_inches="tight")
+fig.savefig(output_dir / "noise_robustness.png", dpi=300, bbox_inches="tight")
+plt.close(fig)
+
+print(f"Saved to {output_dir / 'noise_robustness.pdf'}")

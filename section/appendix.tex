@@ -70,3 +70,31 @@ S_{\mathrm{prior}}(r)
 \end{equation}
 
 A larger \(S_{\mathrm{prior}}(r)\) indicates lower structural branching uncertainty and higher prior reliability. This prior is later combined with the triplet-level semantic score to guide knowledge graph structure filtering.
+
+\section{Full Ablation Results}
+\label{app:full_ablation}
+
+\begin{table*}[t]
+	\small
+	\centering
+	\caption{Complete ablation study of FlowKG on four datasets. The best results are highlighted in bold.}
+	\label{tab:ablation_full}
+	\begin{tabular}{l|cc|cc|cc|cc}
+		\toprule
+		\multirow{2}{*}{Variants}
+		& \multicolumn{2}{c|}{MIND}
+		& \multicolumn{2}{c|}{ML-1M}
+		& \multicolumn{2}{c|}{Last-FM}
+		& \multicolumn{2}{c}{Yelp} \\
+		\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+		& Recall@20 & NDCG@20 & Recall@20 & NDCG@20 & Recall@20 & NDCG@20 & Recall@20 & NDCG@20 \\
+		\midrule
+		 w/o ESL & 0.0930 & 0.0601 & 0.3474 & 0.3249 & 0.4073 & 0.2473 & 0.1226 & 0.0688 \\
+		 w/o DVE & 0.0886 & 0.0565 & 0.3258 & 0.3072 & 0.3990 & 0.2445 & 0.1175 & 0.0662 \\
+		 w/o FM  & 0.0764 & 0.0510 & 0.3374 & 0.3131 & 0.3892 & 0.2385 & 0.1180 & 0.0662 \\
+		 w/o CL  & 0.0612 & 0.0396 & 0.3242 & 0.3059 & 0.3862 & 0.2200 & 0.1154 & 0.0623 \\
+		\hline
+		\rule{0pt}{2ex}Full Model & \textbf{0.0937} & \textbf{0.0607} & \textbf{0.3517} & \textbf{0.3283} & \textbf{0.4106} & \textbf{0.2509} & \textbf{0.1232} & \textbf{0.0691} \\
+		\bottomrule
+	\end{tabular}
+\end{table*}

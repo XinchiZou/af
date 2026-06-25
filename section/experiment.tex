@@ -109,7 +109,6 @@ To benchmark the effectiveness of FlowKG, we compare it against a diverse set of
 %\end{table}
 
 
-
 \subsubsection{\textbf{Parameter Settings}}
 We implement FlowKG and all baselines using PyTorch on an NVIDIA RTX 4090 GPU. For a fair comparison, we fix the embedding dimension to 64, the batch size to 1024, and the learning rate to $1e^{-4}$, optimizing the model via Adam~\cite{kingma2014adam} with Xavier initialization~\cite{xavier2007unravelling}. Baseline hyperparameters follow the optimal settings reported in their respective papers. For FlowKG, we determine the optimal hyperparameters via grid search on the validation set. Specifically, the layer depths for collaborative and semantic views ($L_{cf}, L_{kg}$) are tuned in $\{1, 2, 3\}$, and the noise perturbation $\epsilon$ is searched in $\{0.05, \dots, 0.5\}$. The structure learning parameters $\rho$ and $\alpha$ are adjusted within $[0.1, 0.9]$. For the Flow Matching module, we set the time step embedding size to 10 and tune the start time $t_{\text{start}}$ in $[0.1, 0.9]$. Regarding the optimization objectives, the user-side and item-side contrastive loss weights $\lambda_{u}$ and $\lambda_{i}$ are tuned in $[0.0, 1.0]$, and the flow matching loss weight $\lambda_{\text{fm}}$ is tuned in $\{1, \dots, 20\}$. The temperature $\tau$ is searched in $\{0.1, \dots, 1.0\}$ (including the MD loss limit), and the $\ell_2$ regularization coefficient $\lambda_{\text{reg}}$ is selected from $\{1e^{-7}, 1e^{-6}, 1e^{-5}\}$. During inference, the Euler integration steps $N$ are selected from $\{1, \dots, 5\}$ to balance efficiency and accuracy.
 
@@ -171,35 +170,40 @@ We implement FlowKG and all baselines using PyTorch on an NVIDIA RTX 4090 GPU. F
 		\end{tabular}
 \end{table*}
 
-\setlength{\tabcolsep}{6pt}
-\begin{table*}[t]
+\begin{table}[!tbp]
 	\small
 	\centering
-	\caption{Ablation study of FlowKG on four datasets. The best results are highlighted in bold.}
+	\setlength{\tabcolsep}{1.8pt}
+	\caption{Ablation study of FlowKG on three representative datasets. The full four-dataset results are reported in Appendix~\ref{app:full_ablation}. The best results are highlighted in bold.}
 	\label{tab:ablation}
-		\begin{tabular}{l|cc|cc|cc|cc}
-			\toprule
-			\multirow{2}{*}{Variants}
-			& \multicolumn{2}{c|}{MIND}
-			& \multicolumn{2}{c|}{MovieLens-1M}
-			& \multicolumn{2}{c|}{Last-FM}
-			& \multicolumn{2}{c}{Yelp} \\
-			\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
-			& Recall@20 & NDCG@20 & Recall@20 & NDCG@20 & Recall@20 & NDCG@20 & Recall@20 & NDCG@20 \\
-			\midrule
-			 w/o ESL & 0.0930 & 0.0601 & 0.3474 & 0.3249 & 0.4073 & 0.2473 & 0.1226 & 0.0688 \\
-			 w/o DVE & 0.0886 & 0.0565 & 0.3258 & 0.3072 & 0.3990 & 0.2445 & 0.1175 & 0.0662 \\
-			 w/o FM  & 0.0764 & 0.0510 & 0.3374 & 0.3131 & 0.3892 & 0.2385 & 0.1180 & 0.0662 \\
-			 w/o CL  & 0.0612 & 0.0396 & 0.3242 & 0.3059 & 0.3862 & 0.2200 & 0.1154 & 0.0623 \\
-			\hline
-			\rule{0pt}{2ex}Full Model  & \textbf{0.0937} & \textbf{0.0607} & \textbf{0.3517} & \textbf{0.3283} & \textbf{0.4106} & \textbf{0.2509} & \textbf{0.1232} & \textbf{0.0691} \\
-			\bottomrule
-		\end{tabular}
-\end{table*}
+	\begin{tabular}{l|cc|cc|cc}
+		\toprule
+		\multirow{2}{*}{Variants}
+		& \multicolumn{2}{c|}{MIND}
+		& \multicolumn{2}{c|}{ML-1M}
+		& \multicolumn{2}{c}{Last-FM} \\
+		\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+		& R@20 & N@20 & R@20 & N@20 & R@20 & N@20 \\
+		\midrule
+		 w/o ESL & 0.0930 & 0.0601 & 0.3474 & 0.3249 & 0.4073 & 0.2473 \\
+		 w/o DVE & 0.0886 & 0.0565 & 0.3258 & 0.3072 & 0.3990 & 0.2445 \\
+		 w/o FM  & 0.0764 & 0.0510 & 0.3374 & 0.3131 & 0.3892 & 0.2385 \\
+		 w/o CL  & 0.0612 & 0.0396 & 0.3242 & 0.3059 & 0.3862 & 0.2200 \\
+		\hline
+		\rule{0pt}{2ex}Full Model & \textbf{0.0937} & \textbf{0.0607} & \textbf{0.3517} & \textbf{0.3283} & \textbf{0.4106} & \textbf{0.2509} \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\subsection{Performance Comparison (RQ1)}
+
+Table~\ref{tab:overall_performance} demonstrates that FlowKG consistently achieves state-of-the-art performance, significantly outperforming all baselines across datasets. Early GNNs (e.g., KGAT) capture connectivity but suffer from noise propagation. Subsequent CL methods (e.g., KGRec, LightKG) improve robustness via self-supervision; however, they remain constrained by cascaded architectures or lack effective handling of underlying structural noise. Furthermore, we observe that LightKG delivers outstanding performance on dense datasets (ML-1M, Last-FM) via simplification; yet, it exhibits significant degradation on interaction-sparse datasets (MIND), indicating insufficient capability to capture scarce collaborative signals. While generative baselines like KMDCL show promise, they rely on stochastic diffusion processes.
+
+In contrast, FlowKG establishes a substantial margin over the strongest baseline KMDCL, achieving remarkable improvements particularly on the sparse MIND and Yelp datasets. This superiority stems from two fundamental designs: \begin{itemize} \item \textbf{Direct Latent Refinement.} Unlike methods that diffuse graph structures or rely on stochastic sampling, FlowKG employs Flow Matching to construct deterministic ODE paths directly in the continuous representation space. This allows for a more direct and stable evolution of embeddings from noise to high-quality semantic manifolds. \item \textbf{Pre-encoding Structural Purification.} Addressing the structural blindness of previous works, our Entropy-Guided module combines structural priors with learned semantic posteriors to assess triplet quality before encoding. This dual-scoring approach ensures the model learns from a purified semantic view, effectively preventing the ``garbage-in, garbage-out'' issue inherent in cascaded architectures. \end{itemize}
 
 \begin{figure}[t]
 	\centering
-	\includegraphics[width=\columnwidth]{image/ablation_chart_lastfm}
+	\includegraphics[width=\columnwidth]{image/ablation_chart_lastfm_unified}
 	\caption{In-depth mechanism analysis on Last-FM, illustrating architecture evolution, additive gains, and subtractive impacts of key components.}
 	\label{fig:ablation_chart_lastfm}
 \end{figure}
@@ -213,17 +217,17 @@ We implement FlowKG and all baselines using PyTorch on an NVIDIA RTX 4090 GPU. F
 
 \begin{figure}[t]
 	\centering
-	\includegraphics[width=\columnwidth]{image/noise_robustness} 
-	%	\columnwidth
-	\caption{Robustness evaluation under 20\% knowledge noise. The values indicate the performance retention ratio relative to the noise-free setting.}
+	\includegraphics[width=\columnwidth]{image/noise_robustness}
+	\caption{NDCG@20 under increasing knowledge noise ratios on MIND and Last-FM. The full FlowKG model is compared with its variants and representative baselines.}
 	\label{fig:noise_robustness}
 \end{figure}
-\subsection{Performance Comparison (RQ1)}
 
-Table~\ref{tab:overall_performance} demonstrates that FlowKG consistently achieves state-of-the-art performance, significantly outperforming all baselines across datasets. Early GNNs (e.g., KGAT) capture connectivity but suffer from noise propagation. Subsequent CL methods (e.g., KGRec, LightKG) improve robustness via self-supervision; however, they remain constrained by cascaded architectures or lack effective handling of underlying structural noise. Furthermore, we observe that LightKG delivers outstanding performance on dense datasets (ML-1M, Last-FM) via simplification; yet, it exhibits significant degradation on interaction-sparse datasets (MIND), indicating insufficient capability to capture scarce collaborative signals. While generative baselines like KMDCL show promise, they rely on stochastic diffusion processes.
-
-In contrast, FlowKG establishes a substantial margin over the strongest baseline KMDCL, achieving remarkable improvements particularly on the sparse MIND and Yelp datasets. This superiority stems from two fundamental designs: \begin{itemize} \item \textbf{Direct Latent Refinement.} Unlike methods that diffuse graph structures or rely on stochastic sampling, FlowKG employs Flow Matching to construct deterministic ODE paths directly in the continuous representation space. This allows for a more direct and stable evolution of embeddings from noise to high-quality semantic manifolds. \item \textbf{Pre-encoding Structural Purification.} Addressing the structural blindness of previous works, our Entropy-Guided module combines structural priors with learned semantic posteriors to assess triplet quality before encoding. This dual-scoring approach ensures the model learns from a purified semantic view, effectively preventing the ``garbage-in, garbage-out'' issue inherent in cascaded architectures. \end{itemize}
-
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=\columnwidth]{image/lastfm_sparsity_metrics}
+	\caption{Performance comparison across different user and item sparsity groups on Last-FM under NDCG@20 and Recall@20.}
+	\label{fig:lastfm_sparsity_metrics}
+\end{figure}
 
 \begin{figure*}[t] % 星号 * 表示横跨双栏，[t] 表示通常建议放在页面顶部
 	\centering
@@ -233,6 +237,49 @@ In contrast, FlowKG establishes a substantial margin over the strongest baseline
 	\label{fig:efficiency_pareto}
 \end{figure*}
 
+\iffalse
+\begin{table}[t]
+	\centering
+	\caption{Tabular summary of the efficiency-performance trade-off in Figure~\ref{fig:efficiency_pareto}. Params denotes parameter count in millions, and Time denotes seconds per epoch.}
+	\label{tab:efficiency_pareto}
+	\scriptsize
+	\setlength{\tabcolsep}{3.0pt}
+	\renewcommand{\arraystretch}{1.05}
+	\resizebox{\columnwidth}{!}{
+		\begin{tabular}{llcccc}
+			\toprule
+			Methods & Component & MIND & ML-1M & Last-FM & Yelp \\
+			\midrule
+			\multirow{3}{*}{FlowKG}
+			& NDCG@20 & \textbf{0.0607} & \textbf{0.3283} & \textbf{0.2509} & \textbf{0.0691} \\
+			& Params (M) & 9.68 & 0.86 & 0.77 & 4.18 \\
+			& Time (s) & 166.5 & 10.6 & 0.667 & 9.7 \\
+			\midrule
+			\multirow{3}{*}{KMDCL}
+			& NDCG@20 & 0.0419 & 0.3059 & 0.2205 & 0.0546 \\
+			& Params (M) & 158.34 & 21.03 & 28.85 & 76.71 \\
+			& Time (s) & 234.0 & 11.9 & 2.8 & 18.7 \\
+			\midrule
+			\multirow{3}{*}{DiffKG}
+			& NDCG@20 & 0.0389 & 0.2875 & 0.2091 & 0.0518 \\
+			& Params (M) & 108.80 & 14.30 & 19.48 & 52.53 \\
+			& Time (s) & 144.3 & 10.8 & 2.12 & 10.2 \\
+			\midrule
+			\multirow{3}{*}{LightKG}
+			& NDCG@20 & 0.0276 & 0.3132 & 0.2430 & 0.0458 \\
+			& Params (M) & 8.62 & 0.82 & 0.72 & 4.14 \\
+			& Time (s) & 252.0 & 11.5 & 0.2 & 13.4 \\
+			\midrule
+			\multirow{3}{*}{KGRec}
+			& NDCG@20 & 0.0319 & 0.1901 & 0.1556 & 0.0476 \\
+			& Params (M) & 9.66 & 0.84 & 0.74 & 4.16 \\
+			& Time (s) & 660.0 & 10.1 & 1.29 & 15.9 \\
+			\bottomrule
+		\end{tabular}
+	}
+\end{table}
+\fi
+
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=\columnwidth]{image/scatter}
@@ -241,16 +288,19 @@ In contrast, FlowKG establishes a substantial margin over the strongest baseline
 \end{figure}
 
 
+
 \subsection{Ablation Study (RQ2)}
 \subsubsection{\textbf{Key Module Ablation}}
-To systematically evaluate the contribution of each component, we compare the full FlowKG with four variants: (1) w/o ESL, removing the Entropy-Guided Structure Learning; (2) w/o DVE, replacing the Decoupled Dual-View Encoder with a coupled GNN architecture; (3) w/o FM, removing the Flow Matching Refinement; and (4) w/o CL, discarding the dual-level CL. The results are reported in Table~\ref{tab:ablation} and Figure~\ref{fig:ablation_chart_lastfm}.
+To systematically evaluate the contribution of each component, we compare the full FlowKG with four variants: (1) w/o ESL, removing the Entropy-Guided Structure Learning; (2) w/o DVE, replacing the Decoupled Dual-View Encoder with a coupled GNN architecture; (3) w/o FM, removing the Flow Matching Refinement; and (4) w/o CL, discarding the dual-level CL. For compact presentation, the main text reports three representative datasets in Table~\ref{tab:ablation}, with the complete four-dataset ablation results provided in Appendix~\ref{app:full_ablation}. Figure~\ref{fig:ablation_chart_lastfm} further analyzes the Last-FM mechanism.
+
 
 Table~\ref{tab:ablation} confirms the full model's superior performance, demonstrating module synergy. First, removing CL causes the most severe degradation (e.g., -34.7\% Recall@20 on MIND), establishing it as a foundational paradigm against data sparsity. Furthermore, the substantial drop without FM verifies its critical role in preventing representation degradation through distributional evolution. Finally, the consistent performance losses without ESL and DVE confirm that filtering structural noise and decoupling views are essential prerequisites for robust representation learning.
 
-Figure~\ref{fig:ablation_chart_lastfm} presents a multi-dimensional ablation study on Last-FM to scrutinize the internal mechanism. The Decoupled Skeleton outperforms the Coupled Skeleton in Recall@20 (0.352 vs. 0.342), empirically validating that strict view decoupling prevents noise propagation. Both additive and subtractive analyses confirm the contribution of each component: adding ESL, FM, or CL individually improves performance, while removing any causes decline. This consistent “building-up” and “stripping-down” evidence robustly verifies that every module in FlowKG distinctively enhances the final performance.
+Figure~\ref{fig:ablation_chart_lastfm} presents a multi-dimensional ablation study on Last-FM to scrutinize the internal mechanism. The Decoupled Skeleton outperforms the Coupled Skeleton in Recall@20 (0.352 vs. 0.342), empirically validating that strict view decoupling prevents noise propagation. Both additive and subtractive analyses confirm the contribution of each component: adding ESL, FM, or CL individually improves performance, while removing any causes decline. This consistent "building-up" and "stripping-down" evidence robustly verifies that every module in FlowKG distinctively enhances the final performance.
 
 \subsubsection{\textbf{Sensitivity to Key Hyperparameters}}
 To investigate the properties of FlowKG, we analyze the impact of three key hyperparameters: the retention rate $\rho$, integration steps $N$, and contrastive temperature $\tau$, as summarized in Figure~\ref{fig:hyperparameter}.
+
 
 \noindent\textbf{Impact of Retention Rate $\rho$.}
 As shown in Figure~\ref{fig:hyperparameter}(a), performance follows a convex pattern across all datasets. Both excessive pruning ($\rho=0.1$) and retaining the full noisy graph ($\rho \to 1.0$) lead to degradation. The optimal sweet spot typically spans from $\rho=0.4$ to $\rho=0.8$, confirming that the Entropy-Guided Structure Learning module successfully identifies a trade-off zone where structural noise is filtered while intrinsic semantic information is preserved.
@@ -261,13 +311,12 @@ Figure~\ref{fig:hyperparameter}(b) demonstrates the remarkable stability of our 
 \noindent\textbf{Impact of Temperature $\tau$.}
 Figure~\ref{fig:hyperparameter}(c) reveals dataset-dependent preferences. Denser datasets like ML-1M benefit from a moderate $\tau$ (e.g., 0.2) to maintain discriminative power. Conversely, on the MIND dataset characterized by extreme interaction sparsity and high-dimensional relations, performance improves monotonically as $\tau$ increases, peaking at the theoretical limit of Mean Difference (MD) loss. This verifies that in scenarios with high sparsity where ``hard negatives'' are likely to be unobserved positives (False Negatives), shifting the objective from local hard-negative discrimination to global representation alignment (via high $\tau$ or MD loss) provides significantly better robustness.
 
-
-
-
-
 \subsection{Robustness Analysis (RQ3)}
 
-To evaluate model resilience against structural perturbations, we introduce 20\% random noise to the knowledge graph, with performance retention rates reported in Figure~\ref{fig:noise_robustness}. FlowKG consistently exhibits the minimal performance degradation across all datasets, significantly outperforming the baselines. Analyzing the baselines reveals distinct vulnerabilities: despite employing contrastive learning, LightKG and KGRec suffer notable performance decay as they lack intrinsic mechanisms to filter inherent noise, inevitably forcing the model to align with noisy supervision. Similarly, while generative approaches like DiffKG and KMDCL show improved stability, they are limited by performing denoising solely at the graph structure level via diffusion. In contrast, FlowKG derives its superior robustness from a holistic, multi-layered defense. The upstream Entropy-Guided module combines structural priors with semantic posteriors to adaptively assess and filter triplets, while the downstream Flow Matching further rectifies latent representations. This synergy effectively insulates the recommendation process from structural interference, ensuring robust preference modeling even under severe data corruption.
+
+To evaluate robustness against structural perturbations, we inject random KG noise at ratios from 0\% to 20\%. As shown in Figure~\ref{fig:noise_robustness}, FlowKG consistently achieves the best NDCG@20 and degrades more slowly than KMDCL and DiffKG. Removing either ESL or FM reduces robustness, with the gap widening as noise increases. These results confirm that upstream structure filtering and downstream representation refinement provide complementary protection against noisy knowledge.
+
+We further examine robustness under different sparsity conditions on Last-FM. As shown in Figure~\ref{fig:lastfm_sparsity_metrics}, FlowKG maintains consistent advantages across both user and item groups under NDCG@20 and Recall@20, indicating that the proposed decoupled structure learning and flow-based refinement remain effective for sparse recommendation scenarios.
 
 %\begin{figure}[t]
 %	\centering
@@ -275,7 +324,9 @@ To evaluate model resilience against structural perturbations, we introduce 20\%
 %	\caption{Case Study on MovieLens-1M for item \textbf{``Interstellar''}.}
 %	\label{fig:case_study}
 %\end{figure}
+
 \subsection{Computational Efficiency Analysis (RQ4)}
+
 
 To investigate the trade-off between recommendation accuracy and resource consumption, we visualize the relationship between NDCG@20, training time (per epoch), and parameter magnitude in Figure~\ref{fig:efficiency_pareto}.
 FlowKG demonstrates a superior Pareto efficiency, achieving SOTA performance while maintaining low computational overhead.
@@ -288,4 +339,7 @@ Unlike SDE-based diffusion models that require computationally expensive stochas
 This enables rapid convergence during training and efficient inference, successfully reconciling the high expressiveness of generative models with the practicality required for large-scale recommendation.
 
 \subsection{Visual Interpretability of Manifold Evolution (RQ5)}
+
+
 To intuitively verify the efficacy of the Flow Matching module in rectifying latent representations, we visualize the evolution of item embeddings using Principal Component Analysis (PCA), as depicted in Figure~\ref{fig:scatter}. In the initial state (Figure~\ref{fig:scatter}a), embeddings from distinct categories (e.g., Sports, Autos) exhibit severe semantic entanglement with blurred decision boundaries. This observation confirms that despite the structural pruning, the raw semantic encoder remains susceptible to residual noise, resulting in a dispersed distribution. Conversely, after undergoing the flow-based refinement (Figure~\ref{fig:scatter}b), the representations evolve into compact, well-separated clusters with clear manifold structures. This distinct separation demonstrates that the learned deterministic ODE trajectory successfully acts as a "semantic rectifier," guiding item embeddings from a disordered, noisy distribution to a structured high-density region, thereby significantly enhancing their discriminative power for downstream recommendation.
+

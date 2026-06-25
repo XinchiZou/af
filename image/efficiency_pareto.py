@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import LogNorm
 from matplotlib.lines import Line2D
 from matplotlib.ticker import AutoMinorLocator, LogLocator, NullFormatter
 
@@ -12,7 +13,13 @@ plt.rcParams.update({
     "xtick.labelsize": 20,
     "ytick.labelsize": 20,
     "legend.fontsize": 13,
-    "figure.figsize": (30, 6.5)
+    "figure.figsize": (30, 6.5),
+    "axes.linewidth": 1.1,
+    "axes.edgecolor": "#333333",
+    "xtick.color": "#333333",
+    "ytick.color": "#333333",
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
 })
 
 
@@ -56,7 +63,7 @@ def plot_pareto_ndcg_time_params_v1():
     }
 
     # 参数量只体现在颜色深度上：点大小固定
-    base_size = 320
+    base_size = 285
 
     # 统一颜色映射范围（单位：Millions）
     all_params_m = []
@@ -66,7 +73,8 @@ def plot_pareto_ndcg_time_params_v1():
     vmin = float(min(all_params_m))
     vmax = float(max(all_params_m))
 
-    cmap = plt.cm.get_cmap('coolwarm')
+    norm = LogNorm(vmin=vmin, vmax=vmax)
+    cmap = plt.get_cmap('cividis')
 
     # =========================
     # 3) 画布：1x4
@@ -191,9 +199,15 @@ def plot_pareto_ndcg_time_params_v1():
 
         y_min = min(ndcgs)
         y_max = max(ndcgs)
-        y_pad = max((y_max - y_min) * 0.25, 0.005)
+        y_pad = max((y_max - y_min) * 0.28, 0.005)
         y_bottom = y_min - y_pad
         y_top = y_max + y_pad
+        y_bounds = {
+            'ML-1M': (y_min - y_pad * 1.15, y_max + y_pad * 1.45),
+            'Last-FM': (y_min - y_pad * 1.05, y_max + y_pad * 1.35),
+        }
+        if dataset_name in y_bounds:
+            y_bottom, y_top = y_bounds[dataset_name]
 
         # X 轴：范围很窄（例如 9~14s）时使用线性轴显示真实值；否则用 log-x
         t_min = float(min(times))
@@ -208,6 +222,16 @@ def plot_pareto_ndcg_time_params_v1():
             x_left, x_right = _auto_log_xlim(times)
             ticks, labels = _auto_log_ticks(x_left, x_right)
 
+        if dataset_name == 'ML-1M':
+            x_left, x_right = 9.75, 12.15
+            ticks, labels = [10, 11, 12], ['10', '11', '12']
+        elif dataset_name == 'Yelp':
+            x_left, x_right = 8.2, 19.7
+            ticks, labels = [10, 12, 14, 16, 18], ['10', '12', '14', '16', '18']
+        elif dataset_name == 'Last-FM':
+            x_left, x_right = 0.45, 3.55
+            ticks, labels = [0.5, 1, 2, 3], ['0.5', '1', '2', '3']
+
         # 用时间排序给标注分配不同的“上下”错位，减少重叠（保持严格正上/正下）
         order = np.argsort(times)
         rank_by_model = {models[order[j]]: j for j in range(len(models))}
@@ -221,21 +245,28 @@ def plot_pareto_ndcg_time_params_v1():
                 times[i],
                 ndcgs[i],
                 c=[params_m[i]],
-                vmin=vmin,
-                vmax=vmax,
+                norm=norm,
                 cmap=cmap,
                 s=(base_size * (1.15 if is_ours else 1.0)),
                 marker=markers[m],
-                edgecolors=edge_c,
-                linewidth=line_w,
+                edgecolors='#D94A3A' if is_ours else edge_c,
+                linewidths=line_w,
                 zorder=8,
-                alpha=0.85
+                alpha=0.96
             )
             scatters.append(sc)
 
             # 标注严格放在点的正上/正下
             x_off = 0
             ha = 'center'
+            label_adjust = {
+                ('ML-1M', 'FlowKG'): (-9, 14, 11),
+                ('ML-1M', 'DiffKG'): (-21, 7, 11),
+                ('ML-1M', 'LightKG'): (-15, 16, 11),
+                ('ML-1M', 'KMDCL'): (-17, 17, 11),
+                ('Last-FM', 'DiffKG'): (-18, 14, 12),
+                ('Last-FM', 'KMDCL'): (-18, 15, 12),
+            }
 
             # 轻微上下错位，缓解近邻重叠（尤其 ML-1M）
             rank = rank_by_model.get(m, 0)
@@ -243,9 +274,15 @@ def plot_pareto_ndcg_time_params_v1():
             # param_jitter = 10 if (rank % 2 == 1) else 0
             name_jitter = 0
             param_jitter = 0
+            label_fontsize = 13
+            if (dataset_name, m) in label_adjust:
+                name_offset_override, param_offset_override, label_fontsize = label_adjust[(dataset_name, m)]
+            else:
+                name_offset_override = None
+                param_offset_override = None
             # --- 文本标注 1: 模型名 + 时间 (正下方) ---
             display_text = f"{m}\n({_pretty_time(times[i])}s)"
-            y_offset_name = -15 + name_jitter
+            y_offset_name = name_offset_override if name_offset_override is not None else -15 + name_jitter
             ax.annotate(
                 display_text,
                 (times[i], ndcgs[i]),
@@ -253,14 +290,15 @@ def plot_pareto_ndcg_time_params_v1():
                 textcoords='offset points',
                 ha=ha,
                 va='top',
-                fontsize=14,
-                fontweight='bold',
+                fontsize=label_fontsize,
+                fontweight='semibold',
+                color='#222222',
                 zorder=12
             )
 
             # --- 文本标注 2: 参数量 (正上方) ---
             p_txt = f"{params_m[i]:.2f}M"
-            y_offset_param = 13 + param_jitter
+            y_offset_param = param_offset_override if param_offset_override is not None else 13 + param_jitter
             # if is_ours:
             #     y_offset_param = 20 + param_jitter
             # 顶部空间不足时，把参数标注放到点下方
@@ -274,8 +312,8 @@ def plot_pareto_ndcg_time_params_v1():
                 textcoords='offset points',
                 ha=ha,
                 va=param_va,
-                fontsize=14,
-                color='#333',
+                fontsize=label_fontsize,
+                color='#333333',
                 zorder=12
             )
 
@@ -292,8 +330,13 @@ def plot_pareto_ndcg_time_params_v1():
             ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10)))
             ax.xaxis.set_minor_formatter(NullFormatter())
 
-        ax.grid(True, linestyle='--', alpha=0.4, which='major')
-        ax.grid(True, axis='x', linestyle='--', alpha=0.25, which='minor')
+        ax.grid(True, linestyle=(0, (2.5, 2.5)), linewidth=0.8, color='#B8B8B8', alpha=0.65, which='major')
+        ax.grid(True, axis='x', linestyle=(0, (2, 2.8)), linewidth=0.55, color='#B8B8B8', alpha=0.45, which='minor')
+        ax.set_axisbelow(True)
+        for spine in ax.spines.values():
+            spine.set_linewidth(1.1)
+            spine.set_color('#333333')
+        ax.tick_params(direction='out', width=1.0, length=4, pad=6, colors='#333333')
         ax.set_title(dataset_name, fontweight='bold', y=1.02, fontsize=22)
         ax.set_ylim(y_bottom, y_top)
 
@@ -311,7 +354,7 @@ def plot_pareto_ndcg_time_params_v1():
                 xytext=arrow_start,
                 xycoords='axes fraction',
                 textcoords='axes fraction',
-                arrowprops=dict(facecolor='gray', arrowstyle='->', lw=1.5),
+                arrowprops=dict(facecolor='#555555', edgecolor='#555555', arrowstyle='->', lw=1.25),
             )
 
             # 单独画文字（不影响箭头方向）
@@ -321,7 +364,7 @@ def plot_pareto_ndcg_time_params_v1():
                 "High Efficiency\nHigh Accuracy",
                 transform=ax.transAxes,
                 fontsize=12,
-                color='gray',
+                color='#555555',
                 ha='left',
                 va='top'
             )
@@ -345,19 +388,22 @@ def plot_pareto_ndcg_time_params_v1():
     ax_mind.set_ylabel('NDCG@20', fontsize=20, fontweight='bold')
 
     # 共享 Colorbar + 留出底部空间放总图例
-    plt.subplots_adjust(right=0.9, bottom=0.25, wspace=0.22)
+    plt.subplots_adjust(right=0.9, bottom=0.25, top=0.80, wspace=0.22)
     cbar_ax = fig.add_axes([0.92, 0.22, 0.012, 0.62])
     cbar = fig.colorbar(first_scatter, cax=cbar_ax)
     cbar.set_label('Parameter Count (Millions)', rotation=270, labelpad=18, fontweight='bold', fontsize=20)
-    cbar.ax.tick_params(labelsize=20)
+    cbar.set_ticks([1, 10, 100])
+    cbar.ax.set_yticklabels(['1', '10', '100'])
+    cbar.ax.tick_params(labelsize=18, width=0.9, length=3.5)
+    cbar.outline.set_linewidth(0.9)
 
     # 图例（沿用原风格表达）
     legend_elements = [
-        Line2D([0], [0], marker='*', color='w', markerfacecolor='gold', label='FlowKG', markersize=15, markeredgecolor='k'),
-        Line2D([0], [0], marker='D', color='w', markerfacecolor='gray', label='KMDCL', markersize=11, markeredgecolor='k'),
-        Line2D([0], [0], marker='s', color='w', markerfacecolor='gray', label='DiffKG', markersize=11, markeredgecolor='k'),
-        Line2D([0], [0], marker='^', color='w', markerfacecolor='gray', label='LightKG', markersize=11, markeredgecolor='k'),
-        Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', label='KGRec', markersize=11, markeredgecolor='k'),
+        Line2D([0], [0], marker='*', color='w', markerfacecolor='#8F8F8F', label='FlowKG', markersize=18, markeredgecolor='#D94A3A', markeredgewidth=1.9),
+        Line2D([0], [0], marker='D', color='w', markerfacecolor='#8F8F8F', label='KMDCL', markersize=14, markeredgecolor='#333333', markeredgewidth=1.1),
+        Line2D([0], [0], marker='s', color='w', markerfacecolor='#8F8F8F', label='DiffKG', markersize=14, markeredgecolor='#333333', markeredgewidth=1.1),
+        Line2D([0], [0], marker='^', color='w', markerfacecolor='#8F8F8F', label='LightKG', markersize=14, markeredgecolor='#333333', markeredgewidth=1.1),
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='#8F8F8F', label='KGRec', markersize=14, markeredgecolor='#333333', markeredgewidth=1.1),
     ]
     # 每张子图右上角都放一个图例（逐个设置）
     ax_mind.legend(
@@ -415,6 +461,26 @@ def plot_pareto_ndcg_time_params_v1():
         columnspacing=2.0,
         handletextpad=0.8,
         handlelength=1.6,
+    )
+
+    for ax in axes:
+        legend = ax.get_legend()
+        if legend is not None:
+            legend.remove()
+
+    fig.legend(
+        handles=legend_elements,
+        loc='upper center',
+        bbox_to_anchor=(0.46, 1.0),
+        ncol=5,
+        frameon=False,
+        fancybox=False,
+        fontsize=18,
+        borderpad=0.0,
+        labelspacing=0.6,
+        columnspacing=2.0,
+        handletextpad=0.62,
+        handlelength=2.3,
     )
 
     plt.savefig('efficiency_pareto.png', format='png', dpi=300, bbox_inches='tight')

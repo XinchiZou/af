@@ -30,34 +30,23 @@ desktop.ini
 *.swo
 *.bak
 *~
+__pycache__/
+*.py[cod]
+/%SystemDrive%/
 
-# Unused/intermediate image artifacts not referenced by the paper
-/image/case_study.*
-/image/model.pdf
-/image/motivation.pdf
-/image/motivation_a.png
-/image/motivation_b.png
-/image/latest_scatter.npz
+# Archived image experiments and unused assets
+/image/misc/
 
-# Intermediate plot outputs; referenced final PDFs are kept
-/image/ablation_chart_lastfm.png
+# Plot previews; referenced final PDF/PNG assets are kept
+/image/ablation_chart_lastfm_unified.png
 /image/efficiency_pareto.png
-/image/efficiency_pareto_mind.pdf
-/image/efficiency_pareto_mind.png
-/image/efficiency_pareto_ml1m.pdf
-/image/efficiency_pareto_ml1m.png
-/image/efficiency_pareto_lastfm.pdf
-/image/efficiency_pareto_lastfm.png
-/image/efficiency_pareto_yelp.pdf
-/image/efficiency_pareto_yelp.png
 /image/hyperparameter_grid.png
-/image/hyperparameter_keep_recall_ndcg.pdf
-/image/hyperparameter_keep_recall_ndcg.png
 /image/hyperparameter_keeprate_recall_ndcg_*.pdf
 /image/hyperparameter_keeprate_recall_ndcg_*.png
 /image/hyperparameter_steps_recall_ndcg_*.pdf
 /image/hyperparameter_steps_recall_ndcg_*.png
 /image/hyperparameter_temp_recall_ndcg_*.pdf
 /image/hyperparameter_temp_recall_ndcg_*.png
+/image/lastfm_sparsity_metrics.png
 /image/noise_robustness.png
 /image/scatter.png

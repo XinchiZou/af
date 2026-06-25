@@ -70,10 +70,11 @@ def plot_steps_sensitivity_dual_axis_mind():
         x_pos,
         recall,
         marker='x',
-        markersize=18,
-        markeredgewidth=4,
-        linestyle='--',
-        linewidth=4,
+        markersize=15,
+        markeredgewidth=3.2,
+        linestyle=(0, (4.5, 2.2)),
+        linewidth=3.2,
+        dash_capstyle='round',
         color=color_recall,
         label='R@20',
         zorder=4,
@@ -84,7 +85,7 @@ def plot_steps_sensitivity_dual_axis_mind():
     ax_right.set_ylabel('')
 
     ax_left.set_xticks(x_pos)
-    ax_left.set_xticklabels([str(s) for s in steps], fontweight='bold', fontsize=26)
+    ax_left.set_xticklabels([str(s) for s in steps], fontweight='semibold', fontsize=24)
 
     y_pad_ratio = 1
 
@@ -131,18 +132,18 @@ def plot_steps_sensitivity_dual_axis_mind():
     for y_l in left_yticks:
         ratio = (y_l - left_ylim[0]) / (left_ylim[1] - left_ylim[0])
         y_r = right_ylim[0] + ratio * (right_ylim[1] - right_ylim[0])
-        ax_right.axhline(y_r, linestyle='--', linewidth=4, color='lightgray', alpha=1.0, zorder=1)
+        ax_right.axhline(y_r, linestyle=(0, (3.2, 2.4)), linewidth=2.2, color='lightgray', alpha=0.95, zorder=1)
 
     for spine in ax_left.spines.values():
-        spine.set_linewidth(4)
+        spine.set_linewidth(2.6)
         spine.set_color('black')
     for spine in ax_right.spines.values():
-        spine.set_linewidth(4)
+        spine.set_linewidth(2.6)
         spine.set_color('black')
 
-    ax_left.tick_params(axis='x', which='both', width=4, length=10, labelsize=22, pad=14, color='black', labelcolor='black')
-    ax_left.tick_params(axis='y', which='both', width=4, length=10, labelsize=22, pad=14, color='black', labelcolor=color_recall)
-    ax_right.tick_params(axis='y', which='both', width=4, length=10, labelsize=22, pad=14, color='black', labelcolor=color_ndcg)
+    ax_left.tick_params(axis='x', which='both', width=2.6, length=7, labelsize=20, pad=14, color='black', labelcolor='black')
+    ax_left.tick_params(axis='y', which='both', width=2.6, length=7, labelsize=20, pad=14, color='black', labelcolor=color_recall)
+    ax_right.tick_params(axis='y', which='both', width=2.6, length=7, labelsize=20, pad=14, color='black', labelcolor=color_ndcg)
 
     legend_dx = 0.01
     legend_dy = 0.01
@@ -160,9 +161,9 @@ def plot_steps_sensitivity_dual_axis_mind():
         handletextpad=0.2,
         fontsize=20,
     )
-    legend.get_frame().set_linewidth(4)
+    legend.get_frame().set_linewidth(2.6)
 
-    ax_left.set_title('MIND', fontweight='bold', fontsize=30, pad=12)
+    ax_left.set_title('MIND', fontweight='semibold', fontsize=28, pad=12)
 
     plt.tight_layout()
 

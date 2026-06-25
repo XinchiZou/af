@@ -141,7 +141,7 @@ To integrate the generative refinement into the recommendation task, we fuse the
 The user preference score is calculated as the inner product $\hat{y}_{ui} = {\mathbf{e}_u^{cf}}^\top \mathbf{e}_i$.
 We employ the Bayesian Personalized Ranking (BPR) loss~\cite{rendle2012bpr} as the primary objective to maximize the margin between observed and unobserved interactions:
 \begin{equation}
-	\mathcal{L}_{\text{BPR}} = - \sum\nolimits_{(u, i, j) \in \mathcal{D}} \ln \sigma(\hat{y}_{ui} - \hat{y}_{uj}),aaa
+	\mathcal{L}_{\text{BPR}} = - \sum\nolimits_{(u, i, j) \in \mathcal{D}} \ln \sigma(\hat{y}_{ui} - \hat{y}_{uj}),
 \end{equation}
 where $\mathcal{D}$ denotes the training set of triplets $(u, i, j)$, with $i$ being the observed item and $j$ being the sampled negative item.
 

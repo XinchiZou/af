@@ -41,12 +41,20 @@ __pycache__/
 /image/ablation_chart_lastfm_unified.png
 /image/efficiency_pareto.png
 /image/hyperparameter_grid.png
+/image/hyperparameter_grid_all.png
 /image/hyperparameter_keeprate_recall_ndcg_*.pdf
 /image/hyperparameter_keeprate_recall_ndcg_*.png
 /image/hyperparameter_steps_recall_ndcg_*.pdf
 /image/hyperparameter_steps_recall_ndcg_*.png
 /image/hyperparameter_temp_recall_ndcg_*.pdf
 /image/hyperparameter_temp_recall_ndcg_*.png
+/image/hyperparameter_tstart_recall_ndcg*.py
+/image/hyperparameter_tstart_recall_ndcg*.pdf
+/image/hyperparameter_tstart_recall_ndcg*.png
 /image/lastfm_sparsity_metrics.png
 /image/noise_robustness.png
 /image/scatter.png
+
+# Alternate local drafts
+/section/method_flow_compact.tex
+/section/method_revised_flow.tex

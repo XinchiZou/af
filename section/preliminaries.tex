@@ -61,7 +61,7 @@ We first present a formal definition of the knowledge-aware recommendation task,
 We model the task as link prediction within a heterogeneous information network.
 
 \subsubsection{\textbf{User-Item Interaction Graph}}
-Let $\mathcal{U}$ and $\mathcal{I}$ denote the sets of users and items, respectively. The historical interactions between users and items are represented as a bipartite graph $\mathcal{G}{ui} = (\mathcal{U} \cup \mathcal{I}, \mathcal{E}{ui})$, where each edge $(u, i) \in \mathcal{E}_{ui}$ indicates an observed interaction between user $u$ and item $i$.
+Let $\mathcal{U}$ and $\mathcal{I}$ denote the sets of users and items, respectively. The historical interactions between users and items are represented as a bipartite graph $\mathcal{G}_{ui} = (\mathcal{U} \cup \mathcal{I}, \mathcal{E}_{ui})$, where each edge $(u, i) \in \mathcal{E}_{ui}$ indicates an observed interaction between user $u$ and item $i$.
 
 \subsubsection{\textbf{Knowledge Graph (KG)}}
 To incorporate auxiliary semantic information, we utilize a Knowledge Graph $\mathcal{G}_{kg} = (\mathcal{E}, \mathcal{R}, \mathcal{T})$, where $\mathcal{E}$, $\mathcal{R}$, and $\mathcal{T}$ represent the sets of entities, relations, and triplets, respectively. Items are mapped to corresponding entities within this graph, i.e., $\mathcal{I} \subseteq \mathcal{E}$. This mapping enriches the representation of items with contextual information, such as relations like (Movie, Director, Person).

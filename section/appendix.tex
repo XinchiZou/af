@@ -71,13 +71,173 @@ S_{\mathrm{prior}}(r)
 
 A larger \(S_{\mathrm{prior}}(r)\) indicates lower structural branching uncertainty and higher prior reliability. This prior is later combined with the triplet-level semantic score to guide knowledge graph structure filtering.
 
+\section{Analysis of Truncated Residual Flow Refinement}
+\label{app:flow_refinement_analysis}
+
+This section provides additional analysis for the truncated residual refinement used in the Flow Matching module. The goal is to clarify why the inference-time refinement is a local residual correction around the KG semantic anchor, rather than an unconstrained generation process that may overwrite the useful information already encoded in \(\mathbf{e}_i^{kg}\).
+
+In the main method, the refined semantic representation is obtained by
+\begin{equation}
+	\label{eq:app_flow_residual}
+	\mathbf{e}_i^{\mathrm{refined}}
+	=
+	\mathbf{e}_i^{kg}
+	+
+	\Delta_i,
+\end{equation}
+where the residual term is accumulated along a short terminal ODE segment:
+\begin{equation}
+	\label{eq:app_flow_delta}
+	\Delta_i
+	=
+	\sum_{n=0}^{N-1}
+	\mathbf{v}_{t_n}(\mathbf{x}_{t_n};\theta)
+	(t_{n+1}-t_n).
+\end{equation}
+Here, \(t_0=t_{\mathrm{start}}\), \(t_N=1\), and \(t_{\mathrm{start}}\) is chosen close to \(1\). Therefore, the learned vector field is only queried over a short terminal interval of the learned OT path.
+
+\noindent\textbf{Bounded local correction.}
+The truncated integration interval controls how far the refined representation can move away from the original KG semantic anchor. Assume that the learned vector field is bounded along the refinement trajectory, i.e.,
+\[
+\|\mathbf{v}_{t}(\mathbf{x}_{t};\theta)\|\le M .
+\]
+Then the discrete residual in Eq.~\eqref{eq:app_flow_delta} satisfies
+\begin{equation}
+	\label{eq:app_flow_discrete_bound}
+	\begin{aligned}
+		\|\Delta_i\|
+		&=
+		\left\|
+		\sum_{n=0}^{N-1}
+		\mathbf{v}_{t_n}(\mathbf{x}_{t_n};\theta)
+		(t_{n+1}-t_n)
+		\right\| \\
+		&\le
+		\sum_{n=0}^{N-1}
+		\|\mathbf{v}_{t_n}(\mathbf{x}_{t_n};\theta)\|
+		(t_{n+1}-t_n) \\
+		&\le
+		M
+		\sum_{n=0}^{N-1}
+		(t_{n+1}-t_n) \\
+		&=
+		(1-t_{\mathrm{start}})M .
+	\end{aligned}
+\end{equation}
+Equivalently, in the continuous form, we have
+\begin{equation}
+	\label{eq:app_flow_continuous_bound}
+	\begin{aligned}
+		\|\mathbf{e}_i^{\mathrm{refined}}-\mathbf{e}_i^{kg}\|
+		&=
+		\left\|
+		\int_{t_{\mathrm{start}}}^{1}
+		\mathbf{v}_{t}(\mathbf{x}_{t};\theta)\,dt
+		\right\| \\
+		&\le
+		\int_{t_{\mathrm{start}}}^{1}
+		\|\mathbf{v}_{t}(\mathbf{x}_{t};\theta)\|\,dt \\
+		&\le
+		(1-t_{\mathrm{start}})M .
+	\end{aligned}
+\end{equation}
+This shows that the refinement magnitude is controlled by the length of the truncated interval. When \(t_{\mathrm{start}}\) is close to \(1\), the residual correction is constrained to be local around \(\mathbf{e}_i^{kg}\). Thus, the flow module does not freely transport the KG semantic embedding to an arbitrary point, but performs a bounded correction that preserves the original semantic anchor.
+
+\noindent\textbf{Task-aware residual direction.}
+The residual correction is not optimized by the flow-matching objective alone. Since \(\mathbf{e}_i^{\mathrm{refined}}\) is directly used for preference prediction, the recommendation objective also provides gradients to the residual direction. Recall that the final item representation is
+\[
+\mathbf{e}_i
+=
+\mathbf{e}_i^{cf}
++
+\mathbf{e}_i^{\mathrm{refined}}
+=
+\mathbf{e}_i^{cf}
++
+\mathbf{e}_i^{kg}
++
+\Delta_i .
+\]
+For a training triplet \((u,i,j)\), where \(i\) is an observed item and \(j\) is a sampled negative item, the BPR loss is
+\begin{equation}
+	\label{eq:app_bpr_triplet}
+	\mathcal{L}_{\mathrm{BPR}}^{uij}
+	=
+	-\log \sigma(s_{uij}),
+	\quad
+	s_{uij}
+	=
+	\hat{y}_{ui}
+	-
+	\hat{y}_{uj}.
+\end{equation}
+Since the score is computed by the inner product with the user representation, the residual terms \(\Delta_i\) and \(\Delta_j\) directly affect the ranking margin \(s_{uij}\). The gradients with respect to the residual corrections are
+\begin{equation}
+	\label{eq:app_bpr_grad_pos}
+	\frac{\partial \mathcal{L}_{\mathrm{BPR}}^{uij}}
+	{\partial \Delta_i}
+	=
+	(\sigma(s_{uij})-1)\mathbf{e}_u^{cf},
+\end{equation}
+and
+\begin{equation}
+	\label{eq:app_bpr_grad_neg}
+	\frac{\partial \mathcal{L}_{\mathrm{BPR}}^{uij}}
+	{\partial \Delta_j}
+	=
+	(1-\sigma(s_{uij}))\mathbf{e}_u^{cf}.
+\end{equation}
+Therefore, under gradient descent, the residual correction of the positive item is encouraged to move in a direction that increases its compatibility with the user, while the residual correction of the negative item is encouraged to reduce its compatibility with the user. In other words, the recommendation loss makes the residual correction task-aware: directions that improve user-item ranking are encouraged, whereas harmful directions are penalized.
+
+This can also be understood from a local first-order expansion. For a small residual \(\Delta_i\), the recommendation loss satisfies
+\begin{equation}
+	\label{eq:app_flow_first_order}
+	\begin{aligned}
+		\mathcal{L}_{\mathrm{rec}}(\mathbf{e}_i^{kg}+\Delta_i)
+		&=
+		\mathcal{L}_{\mathrm{rec}}(\mathbf{e}_i^{kg}) \\
+		&\quad+
+		\nabla_{\mathbf{e}_i^{kg}}\mathcal{L}_{\mathrm{rec}}^{\top}\Delta_i
+		+
+		\mathcal{O}(\|\Delta_i\|^2).
+	\end{aligned}
+\end{equation}
+The linear term indicates whether the residual direction locally increases or decreases the recommendation loss. During joint optimization, residual directions that reduce the ranking loss are reinforced, while those that increase the loss are suppressed.
+
+Overall, the flow-matching objective learns a semantic vector-field prior from noisy states toward KG-derived semantic anchors, while the BPR objective constrains the induced residual correction according to the recommendation task. Together with the bounded correction property, this explains why the proposed truncated residual flow refinement behaves as a local and task-aware semantic refinement mechanism rather than an unconstrained embedding displacement.
+
+
 \section{Full Ablation Results}
 \label{app:full_ablation}
 
+%\begin{table*}[t]
+%	\small
+%	\centering
+%	\caption{Complete ablation study of FlowKG on four datasets. The best results are highlighted in bold.}
+%	\label{tab:ablation_full}
+%	\begin{tabular}{l|cc|cc|cc|cc}
+%		\toprule
+%		\multirow{2}{*}{Variants}
+%		& \multicolumn{2}{c|}{MIND}
+%		& \multicolumn{2}{c|}{ML-1M}
+%		& \multicolumn{2}{c|}{Last-FM}
+%		& \multicolumn{2}{c}{Yelp} \\
+%		\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+%		& Recall@20 & NDCG@20 & Recall@20 & NDCG@20 & Recall@20 & NDCG@20 & Recall@20 & NDCG@20 \\
+%		\midrule
+%		 w/o ESL & 0.0930 & 0.0601 & 0.3474 & 0.3249 & 0.4073 & 0.2473 & 0.1226 & 0.0688 \\
+%		 w/o DVE & 0.0886 & 0.0565 & 0.3258 & 0.3072 & 0.3990 & 0.2445 & 0.1175 & 0.0662 \\
+%		 w/o FM  & 0.0764 & 0.0510 & 0.3374 & 0.3131 & 0.3892 & 0.2385 & 0.1180 & 0.0662 \\
+%		 w/o CL  & 0.0612 & 0.0396 & 0.3242 & 0.3059 & 0.3862 & 0.2200 & 0.1154 & 0.0623 \\
+%		\hline
+%		\rule{0pt}{2ex}Full Model & \textbf{0.0937} & \textbf{0.0607} & \textbf{0.3517} & \textbf{0.3283} & \textbf{0.4106} & \textbf{0.2509} & \textbf{0.1232} & \textbf{0.0691} \\
+%		\bottomrule
+%	\end{tabular}
+%\end{table*}
 \begin{table*}[t]
 	\small
 	\centering
-	\caption{Complete ablation study of FlowKG on four datasets. The best results are highlighted in bold.}
+	\caption{Complete ablation study of FlowKG on four datasets. ``w/ MLP-R'' replaces the proposed flow refiner with an MLP-based residual refiner while keeping the residual refinement form. The best results are highlighted in bold.}
 	\label{tab:ablation_full}
 	\begin{tabular}{l|cc|cc|cc|cc}
 		\toprule
@@ -89,12 +249,27 @@ A larger \(S_{\mathrm{prior}}(r)\) indicates lower structural branching uncertai
 		\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
 		& Recall@20 & NDCG@20 & Recall@20 & NDCG@20 & Recall@20 & NDCG@20 & Recall@20 & NDCG@20 \\
 		\midrule
-		 w/o ESL & 0.0930 & 0.0601 & 0.3474 & 0.3249 & 0.4073 & 0.2473 & 0.1226 & 0.0688 \\
-		 w/o DVE & 0.0886 & 0.0565 & 0.3258 & 0.3072 & 0.3990 & 0.2445 & 0.1175 & 0.0662 \\
-		 w/o FM  & 0.0764 & 0.0510 & 0.3374 & 0.3131 & 0.3892 & 0.2385 & 0.1180 & 0.0662 \\
-		 w/o CL  & 0.0612 & 0.0396 & 0.3242 & 0.3059 & 0.3862 & 0.2200 & 0.1154 & 0.0623 \\
+		w/o ESL & 0.0930 & 0.0601 & 0.3474 & 0.3249 & 0.4073 & 0.2473 & 0.1226 & 0.0688 \\
+		w/o DVE & 0.0886 & 0.0565 & 0.3258 & 0.3072 & 0.3990 & 0.2445 & 0.1175 & 0.0662 \\
+		w/o FM  & 0.0764 & 0.0510 & 0.3374 & 0.3131 & 0.3892 & 0.2385 & 0.1180 & 0.0662 \\
+		w/ MLP-R & 0.0819 & 0.0541 & 0.3428 & 0.3182 & 0.3966 & 0.2423 & 0.1198 & 0.0670 \\
+		w/o CL  & 0.0612 & 0.0396 & 0.3242 & 0.3059 & 0.3862 & 0.2200 & 0.1154 & 0.0623 \\
 		\hline
-		\rule{0pt}{2ex}Full Model & \textbf{0.0937} & \textbf{0.0607} & \textbf{0.3517} & \textbf{0.3283} & \textbf{0.4106} & \textbf{0.2509} & \textbf{0.1232} & \textbf{0.0691} \\
+		\rule{0pt}{2ex}Full Model
+		& \textbf{0.0937} & \textbf{0.0607}
+		& \textbf{0.3517} & \textbf{0.3283}
+		& \textbf{0.4106} & \textbf{0.2509}
+		& \textbf{0.1232} & \textbf{0.0691} \\
 		\bottomrule
 	\end{tabular}
 \end{table*}
+
+\section{Additional Hyperparameter Sensitivity Results}
+\label{app:hyperparameter_full}
+
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=\columnwidth]{image/hyperparameter_grid_all.pdf}
+	\caption{Full 4$\times$4 sensitivity analysis of key hyperparameters across four datasets, illustrating the impact of structure retention rate $\rho$, integration steps $N$, contrastive temperature $\tau$, and start time $t_{\mathrm{start}}$. Orange bars denote N@20, and blue dashed lines denote R@20.}
+	\label{fig:hyperparameter_full}
+\end{figure}

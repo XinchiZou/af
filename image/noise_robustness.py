@@ -102,8 +102,10 @@ for ax, (dataset, values), panel_label in zip(
     ax.set_yticks(yticks[dataset])
     ax.set_xticks(noise)
     ax.set_xticklabels([f"{value}%" for value in noise])
-    ax.set_xlabel("Knowledge Noise Ratio", fontsize=12.5)
-    ax.set_ylabel("NDCG@20", fontsize=12.5)
+    for label in ax.get_xticklabels():
+        label.set_fontweight("bold")
+    ax.set_xlabel("Knowledge Noise Ratio", fontsize=12.5, fontweight="bold")
+    ax.set_ylabel("NDCG@20", fontsize=12.5, fontweight="bold")
     ax.grid(
         axis="y",
         linestyle=(0, (2, 2)),
@@ -130,6 +132,7 @@ for ax, (dataset, values), panel_label in zip(
         ha="center",
         va="top",
         fontsize=12.5,
+        fontweight="bold",
     )
 
 handles, labels = axes[0].get_legend_handles_labels()
@@ -144,7 +147,7 @@ fig.legend(
     handlelength=2.15,
     handletextpad=0.45,
     markerscale=1.15,
-    prop={"size": 12.2},
+    prop={"size": 12.2, "weight": "bold"},
 )
 
 fig.subplots_adjust(

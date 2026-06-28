@@ -170,11 +170,38 @@ We implement FlowKG and all baselines using PyTorch on an NVIDIA RTX 4090 GPU. F
 		\end{tabular}
 \end{table*}
 
-\begin{table}[!tbp]
+%\begin{table}[t]
+%	\small
+%	\centering
+%	\setlength{\tabcolsep}{1.8pt}
+%	\caption{Ablation study of FlowKG on three representative datasets. The full four-dataset results are reported in Appendix~\ref{app:full_ablation}. The best results are highlighted in bold.}
+%	\label{tab:ablation}
+%	\begin{tabular}{l|cc|cc|cc}
+%		\toprule
+%		\multirow{2}{*}{Variants}
+%		& \multicolumn{2}{c|}{MIND}
+%		& \multicolumn{2}{c|}{ML-1M}
+%		& \multicolumn{2}{c}{Last-FM} \\
+%		\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+%		& R@20 & N@20 & R@20 & N@20 & R@20 & N@20 \\
+%		\midrule
+%		 w/o ESL & 0.0930 & 0.0601 & 0.3474 & 0.3249 & 0.4073 & 0.2473 \\
+%		 w/o DVE & 0.0886 & 0.0565 & 0.3258 & 0.3072 & 0.3990 & 0.2445 \\
+%		 w/o FM  & 0.0764 & 0.0510 & 0.3374 & 0.3131 & 0.3892 & 0.2385 \\
+%		 w/o CL  & 0.0612 & 0.0396 & 0.3242 & 0.3059 & 0.3862 & 0.2200 \\
+%		\hline
+%		\rule{0pt}{2ex}Full Model & \textbf{0.0937} & \textbf{0.0607} & \textbf{0.3517} & \textbf{0.3283} & \textbf{0.4106} & \textbf{0.2509} \\
+%		\bottomrule
+%	\end{tabular}
+%\end{table}
+
+
+
+\begin{table}[t]
 	\small
 	\centering
 	\setlength{\tabcolsep}{1.8pt}
-	\caption{Ablation study of FlowKG on three representative datasets. The full four-dataset results are reported in Appendix~\ref{app:full_ablation}. The best results are highlighted in bold.}
+	\caption{Ablation study of FlowKG on three representative datasets. The best results are highlighted in bold.}
 	\label{tab:ablation}
 	\begin{tabular}{l|cc|cc|cc}
 		\toprule
@@ -185,15 +212,20 @@ We implement FlowKG and all baselines using PyTorch on an NVIDIA RTX 4090 GPU. F
 		\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
 		& R@20 & N@20 & R@20 & N@20 & R@20 & N@20 \\
 		\midrule
-		 w/o ESL & 0.0930 & 0.0601 & 0.3474 & 0.3249 & 0.4073 & 0.2473 \\
-		 w/o DVE & 0.0886 & 0.0565 & 0.3258 & 0.3072 & 0.3990 & 0.2445 \\
-		 w/o FM  & 0.0764 & 0.0510 & 0.3374 & 0.3131 & 0.3892 & 0.2385 \\
-		 w/o CL  & 0.0612 & 0.0396 & 0.3242 & 0.3059 & 0.3862 & 0.2200 \\
+		w/o ESL & 0.0930 & 0.0601 & 0.3474 & 0.3249 & 0.4073 & 0.2473 \\
+		w/o DVE & 0.0886 & 0.0565 & 0.3258 & 0.3072 & 0.3990 & 0.2445 \\
+		w/o FM  & 0.0764 & 0.0510 & 0.3374 & 0.3131 & 0.3892 & 0.2385 \\
+		w/ MLP-R & 0.0819 & 0.0541 & 0.3428 & 0.3182 & 0.3966 & 0.2423 \\
+		w/o CL  & 0.0612 & 0.0396 & 0.3242 & 0.3059 & 0.3862 & 0.2200 \\
 		\hline
-		\rule{0pt}{2ex}Full Model & \textbf{0.0937} & \textbf{0.0607} & \textbf{0.3517} & \textbf{0.3283} & \textbf{0.4106} & \textbf{0.2509} \\
+		\rule{0pt}{2ex}Full Model
+		& \textbf{0.0937} & \textbf{0.0607}
+		& \textbf{0.3517} & \textbf{0.3283}
+		& \textbf{0.4106} & \textbf{0.2509} \\
 		\bottomrule
 	\end{tabular}
 \end{table}
+
 
 \subsection{Performance Comparison (RQ1)}
 
@@ -208,12 +240,12 @@ In contrast, FlowKG establishes a substantial margin over the strongest baseline
 	\label{fig:ablation_chart_lastfm}
 \end{figure}
 
-\begin{figure*}[t] % 关键点：figure*
+\begin{figure}[t]
 	\centering
-	\includegraphics[width=1\textwidth]{image/hyperparameter_grid.pdf}
-	\caption{Sensitivity analysis of key hyperparameters across four datasets, illustrating the impact of structure retention rate $\rho$, integration steps $N$, and contrastive temperature $\tau$. Dashed lines denote the theoretical performance limit using Mean Difference (MD) loss as $\tau \to \infty$.}
+	\includegraphics[width=\columnwidth]{image/hyperparameter_grid.pdf}
+	\caption{Sensitivity analysis of key hyperparameters on ML-1M, illustrating the impact of structure retention rate $\rho$, integration steps $N$, contrastive temperature $\tau$, and start time $t_{\mathrm{start}}$.}
 	\label{fig:hyperparameter}
-\end{figure*}
+\end{figure}
 
 \begin{figure}[t]
 	\centering
@@ -287,29 +319,33 @@ In contrast, FlowKG establishes a substantial margin over the strongest baseline
 	\label{fig:scatter}
 \end{figure}
 
-
-
 \subsection{Ablation Study (RQ2)}
 \subsubsection{\textbf{Key Module Ablation}}
-To systematically evaluate the contribution of each component, we compare the full FlowKG with four variants: (1) w/o ESL, removing the Entropy-Guided Structure Learning; (2) w/o DVE, replacing the Decoupled Dual-View Encoder with a coupled GNN architecture; (3) w/o FM, removing the Flow Matching Refinement; and (4) w/o CL, discarding the dual-level CL. For compact presentation, the main text reports three representative datasets in Table~\ref{tab:ablation}, with the complete four-dataset ablation results provided in Appendix~\ref{app:full_ablation}. Figure~\ref{fig:ablation_chart_lastfm} further analyzes the Last-FM mechanism.
 
+To systematically evaluate the contribution of each component, we compare the full FlowKG with five variants: (1) w/o ESL, removing the Entropy-Guided Structure Learning; (2) w/o DVE, replacing the Decoupled Dual-View Encoder with a coupled GNN architecture; (3) w/o FM, removing the Flow Matching Refinement; (4) w/ MLP-R, replacing the proposed flow refiner with an MLP-based residual refiner; and (5) w/o CL, discarding the dual-level contrastive learning objective. For compact presentation, the main text reports three representative datasets in Table~\ref{tab:ablation}, with the complete four-dataset ablation results provided in Appendix~\ref{app:full_ablation}. Figure~\ref{fig:ablation_chart_lastfm} further analyzes the Last-FM mechanism.
 
-Table~\ref{tab:ablation} confirms the full model's superior performance, demonstrating module synergy. First, removing CL causes the most severe degradation (e.g., -34.7\% Recall@20 on MIND), establishing it as a foundational paradigm against data sparsity. Furthermore, the substantial drop without FM verifies its critical role in preventing representation degradation through distributional evolution. Finally, the consistent performance losses without ESL and DVE confirm that filtering structural noise and decoupling views are essential prerequisites for robust representation learning.
+The w/ MLP-R variant is introduced to examine whether the gain of Flow Matching simply comes from adding an extra nonlinear residual transformation. It preserves the residual refinement form, but removes the time-dependent vector field, OT-path supervision, and flow-matching loss. Instead, it uses a direct MLP-based residual refiner to adjust the KG semantic embedding.
 
-Figure~\ref{fig:ablation_chart_lastfm} presents a multi-dimensional ablation study on Last-FM to scrutinize the internal mechanism. The Decoupled Skeleton outperforms the Coupled Skeleton in Recall@20 (0.352 vs. 0.342), empirically validating that strict view decoupling prevents noise propagation. Both additive and subtractive analyses confirm the contribution of each component: adding ESL, FM, or CL individually improves performance, while removing any causes decline. This consistent "building-up" and "stripping-down" evidence robustly verifies that every module in FlowKG distinctively enhances the final performance.
+Table~\ref{tab:ablation} confirms the superior performance of the full model, demonstrating the synergy among different modules. First, removing CL causes the most severe degradation (e.g., -34.7\% Recall@20 on MIND), establishing it as a foundational component for alleviating data sparsity. Second, w/o FM consistently underperforms the full model, verifying the importance of Flow Matching Refinement for mitigating representation degradation through truncated residual refinement. Third, w/ MLP-R improves over w/o FM but remains inferior to the full model, suggesting that a direct residual MLP provides limited correction, while the time-conditioned vector field learned by Flow Matching offers a more effective semantic refinement prior. Finally, the consistent performance losses without ESL and DVE confirm that filtering structural noise and decoupling views are essential prerequisites for robust representation learning.
+
+Figure~\ref{fig:ablation_chart_lastfm} presents a multi-dimensional ablation study on Last-FM to scrutinize the internal mechanism. The Decoupled Skeleton outperforms the Coupled Skeleton in Recall@20 (0.352 vs. 0.342), empirically validating that strict view decoupling prevents noise propagation. Both additive and subtractive analyses confirm the contribution of each component: adding ESL, FM, or CL individually improves performance, while removing any causes decline. This consistent ``building-up'' and ``stripping-down'' evidence robustly verifies that every module in FlowKG distinctively enhances the final performance.
+
 
 \subsubsection{\textbf{Sensitivity to Key Hyperparameters}}
-To investigate the properties of FlowKG, we analyze the impact of three key hyperparameters: the retention rate $\rho$, integration steps $N$, and contrastive temperature $\tau$, as summarized in Figure~\ref{fig:hyperparameter}.
+To investigate the properties of FlowKG, we analyze the impact of four key hyperparameters on the representative ML-1M dataset: the retention rate $\rho$, integration steps $N$, contrastive temperature $\tau$, and start time $t_{\mathrm{start}}$, as summarized in Figure~\ref{fig:hyperparameter}. Full sensitivity curves on all four datasets are provided in Appendix~\ref{app:hyperparameter_full}.
 
 
 \noindent\textbf{Impact of Retention Rate $\rho$.}
-As shown in Figure~\ref{fig:hyperparameter}(a), performance follows a convex pattern across all datasets. Both excessive pruning ($\rho=0.1$) and retaining the full noisy graph ($\rho \to 1.0$) lead to degradation. The optimal sweet spot typically spans from $\rho=0.4$ to $\rho=0.8$, confirming that the Entropy-Guided Structure Learning module successfully identifies a trade-off zone where structural noise is filtered while intrinsic semantic information is preserved.
+As shown in Figure~\ref{fig:hyperparameter}(a), performance improves as more reliable KG triplets are retained and reaches the best result around $\rho=0.8$. This confirms that the Entropy-Guided Structure Learning module identifies a trade-off zone where structural noise is filtered while intrinsic semantic information is preserved.
 
 \noindent\textbf{Impact of Integration Steps $N$.}
-Figure~\ref{fig:hyperparameter}(b) demonstrates the remarkable stability of our Flow Matching mechanism. Notably, the model achieves optimal performance within just 1--3 Euler steps, and performance remains consistently stable beyond this point. This implies that the learned vector field constructs a highly straight ODE trajectory in the latent space, allowing the model to jump from noise to the target manifold directly. Consequently, a minimal number of integration steps is sufficient for inference, ensuring maximal computational efficiency without sacrificing accuracy.
+Figure~\ref{fig:hyperparameter}(b) demonstrates the remarkable stability of our Flow Matching mechanism. The model achieves optimal performance with only two Euler steps and remains stable as $N$ increases. This implies that the learned vector field constructs a highly straight ODE trajectory in the latent space, allowing the model to jump from noise to the target manifold directly. Consequently, a minimal number of integration steps is sufficient for inference, ensuring maximal computational efficiency without sacrificing accuracy.
 
 \noindent\textbf{Impact of Temperature $\tau$.}
-Figure~\ref{fig:hyperparameter}(c) reveals dataset-dependent preferences. Denser datasets like ML-1M benefit from a moderate $\tau$ (e.g., 0.2) to maintain discriminative power. Conversely, on the MIND dataset characterized by extreme interaction sparsity and high-dimensional relations, performance improves monotonically as $\tau$ increases, peaking at the theoretical limit of Mean Difference (MD) loss. This verifies that in scenarios with high sparsity where ``hard negatives'' are likely to be unobserved positives (False Negatives), shifting the objective from local hard-negative discrimination to global representation alignment (via high $\tau$ or MD loss) provides significantly better robustness.
+Figure~\ref{fig:hyperparameter}(c) shows that contrastive learning benefits from a moderate temperature. A very small $\tau$ overemphasizes hard negatives and harms robustness, whereas an overly large $\tau$ weakens discriminative contrast. The best performance around $\tau=0.7$ indicates a balanced alignment-discrimination trade-off.
+
+\noindent\textbf{Impact of Start Time $t_{\mathrm{start}}$.}
+Figure~\ref{fig:hyperparameter}(d) shows that truncated residual refinement performs best when the integration starts near the terminal part of the flow trajectory, with the strongest result around $t_{\mathrm{start}}=0.8$. This indicates that a short terminal correction can refine KG semantic anchors without drifting too far from useful encoded information. Starting too early introduces unnecessary evolution, while starting too late may limit the corrective capacity of the vector field.
 
 \subsection{Robustness Analysis (RQ3)}
 

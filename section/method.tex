@@ -125,6 +125,7 @@ The model is trained to regress the true displacement using the Conditional Flow
 \begin{equation}
 	\mathcal{L}_{\text{fm}} = \mathbb{E}_{t, \mathbf{x}_0, \mathbf{x}_1} \left[ \| \mathbf{v}_t(\mathbf{x}_t; \theta) - (\mathbf{x}_1 - \mathbf{x}_0) \|^2 \right].
 \end{equation}
+
 \subsubsection{\textbf{Euler Integration Strategy}}
 A key insight of our approach is the dual role of $\mathbf{e}_i^{kg}$: during training, it serves as the target state $\mathbf{x}_1$ to supervise the vector field; during inference, it is re-interpreted as an intermediate state $\mathbf{x}_{t_{\text{start}}}$ on the OT path. This design is motivated by the observation that while $\mathbf{e}_i^{kg}$ captures useful semantics, it may still contain residual noise from the KG. By treating it as a ``partially evolved'' state rather than the final destination, we allow the learned vector field to further refine it toward a higher-quality manifold.
 

@@ -136,6 +136,7 @@ def main() -> None:
             labelspacing=0.62,
             handletextpad=0.42,
             markerscale=0.95,
+            prop={"weight": "bold", "size": args.legend_size},
         )
         legend.get_frame().set_linewidth(0.75)
 

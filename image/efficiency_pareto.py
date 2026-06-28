@@ -291,7 +291,7 @@ def plot_pareto_ndcg_time_params_v1():
                 ha=ha,
                 va='top',
                 fontsize=label_fontsize,
-                fontweight='semibold',
+                fontweight='bold',
                 color='#222222',
                 zorder=12
             )
@@ -313,6 +313,7 @@ def plot_pareto_ndcg_time_params_v1():
                 ha=ha,
                 va=param_va,
                 fontsize=label_fontsize,
+                fontweight='bold',
                 color='#333333',
                 zorder=12
             )
@@ -322,6 +323,8 @@ def plot_pareto_ndcg_time_params_v1():
         ax.set_xlim(x_left, x_right)
         ax.set_xticks(ticks)
         ax.set_xticklabels(labels)
+        for label in ax.get_xticklabels():
+            label.set_fontweight('bold')
         if use_linear_x:
             ax.xaxis.set_minor_locator(AutoMinorLocator(2))
             ax.xaxis.set_minor_formatter(NullFormatter())
@@ -364,6 +367,7 @@ def plot_pareto_ndcg_time_params_v1():
                 "High Efficiency\nHigh Accuracy",
                 transform=ax.transAxes,
                 fontsize=12,
+                fontweight='bold',
                 color='#555555',
                 ha='left',
                 va='top'
@@ -475,7 +479,7 @@ def plot_pareto_ndcg_time_params_v1():
         ncol=5,
         frameon=False,
         fancybox=False,
-        fontsize=18,
+        prop={'size': 18, 'weight': 'bold'},
         borderpad=0.0,
         labelspacing=0.6,
         columnspacing=2.0,

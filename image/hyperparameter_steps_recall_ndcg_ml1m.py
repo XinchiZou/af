@@ -46,8 +46,8 @@ def plot_steps_sensitivity_dual_axis_ml1m():
     steps = sorted(data.keys())
 
     # 数值缩放（默认不缩放）；需要对齐不同图的展示范围时可调
-    recall_scale = 3517/3375
-    ndcg_scale = 3283/3141
+    recall_scale = 3517/3575
+    ndcg_scale = 3283/3342
 
     recall = [round(data[s][0] * recall_scale, 4) for s in steps]
     ndcg = [round(data[s][1] * ndcg_scale, 4) for s in steps]

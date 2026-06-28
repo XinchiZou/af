@@ -110,10 +110,17 @@ ax.set_ylim(0.335, 0.420)
 ax2.set_ylim(0.185, 0.258)
 ax.set_yticks([0.34, 0.38, 0.42])
 ax2.set_yticks([0.19, 0.22, 0.25])
-ax.set_ylabel("Recall@20", fontsize=6.4, labelpad=1.2)
-ax2.set_ylabel("NDCG@20", fontsize=6.4, labelpad=1.2)
+ax.set_ylabel("Recall@20", fontsize=6.4, labelpad=1.2, fontweight="bold")
+ax2.set_ylabel("NDCG@20", fontsize=6.4, labelpad=1.2, fontweight="bold")
 ax.set_xticks(x)
-ax.set_xticklabels(labels, fontsize=5.5, rotation=27, ha="right", rotation_mode="anchor")
+ax.set_xticklabels(
+    labels,
+    fontsize=5.5,
+    rotation=27,
+    ha="right",
+    rotation_mode="anchor",
+    fontweight="bold",
+)
 ax.tick_params(direction="out", width=0.65, length=2.0, pad=1.2, labelsize=5.6)
 ax2.tick_params(direction="out", width=0.65, length=2.0, pad=1.2, labelsize=5.6)
 ax.grid(axis="y", linestyle=(0, (2, 2)), linewidth=0.45, color="#B8B8B8", alpha=0.65, zorder=0)
@@ -127,6 +134,7 @@ for group_name, start, end in groups:
         ha="center",
         va="top",
         fontsize=5.4,
+        fontweight="bold",
         color="#666666",
         zorder=5,
     )
@@ -147,7 +155,7 @@ fig.legend(
     columnspacing=1.25,
     handlelength=1.2,
     handletextpad=0.35,
-    prop={"size": 6.2},
+    prop={"size": 6.2, "weight": "bold"},
 )
 
 fig.subplots_adjust(left=0.115, right=0.885, top=0.84, bottom=0.31)

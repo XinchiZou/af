@@ -1,328 +1,341 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
-from typing import Iterable
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.ticker import FormatStrFormatter
 
 
-def _require_pymupdf():
-    try:
-        import fitz  # type: ignore
-
-        return fitz
-    except Exception as exc:  # pragma: no cover
-        raise RuntimeError(
-            "Missing dependency: pymupdf. Install via `pip install pymupdf` and rerun."
-        ) from exc
-
-
-def _pairs() -> list[list[str]]:
-    return [
-        [
-            "hyperparameter_keeprate_recall_ndcg_mind.pdf",
-            "hyperparameter_keeprate_recall_ndcg_ml1m.pdf",
-            "hyperparameter_steps_recall_ndcg_mind.pdf",
-            "hyperparameter_steps_recall_ndcg_ml1m.pdf",
-            "hyperparameter_temp_recall_ndcg_mind.pdf",
-            "hyperparameter_temp_recall_ndcg_ml1m.pdf",
-        ],
-        [
-            "hyperparameter_keeprate_recall_ndcg_lastfm.pdf",
-            "hyperparameter_keeprate_recall_ndcg_yelp.pdf",
-            "hyperparameter_steps_recall_ndcg_lastfm.pdf",
-            "hyperparameter_steps_recall_ndcg_yelp.pdf",
-            "hyperparameter_temp_recall_ndcg_lastfm.pdf",
-            "hyperparameter_temp_recall_ndcg_yelp.pdf",
-        ],
-    ]
+plt.rcParams.update({
+    "font.family": "serif",
+    "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
+    "mathtext.fontset": "custom",
+    "mathtext.rm": "Times New Roman",
+    "mathtext.it": "Times New Roman:italic",
+    "mathtext.bf": "Times New Roman:bold",
+    "font.size": 11,
+    "axes.titlesize": 13,
+    "xtick.labelsize": 9,
+    "ytick.labelsize": 8,
+    "legend.fontsize": 9,
+})
 
 
-def _resolve_existing(img_dir: Path, name: str) -> Path:
-    """Prefer PDF; fallback to PNG with the same stem."""
+DATA = {
+    "MIND": {
+        "rho": {
+            "x": [0.2, 0.4, 0.6, 0.8],
+            "recall": [0.0937, 0.0933, 0.0936, 0.0937],
+            "ndcg": [0.0604, 0.0605, 0.0607, 0.0606],
+        },
+        "N": {
+            "x": [1, 2, 3, 4, 5],
+            "recall": [0.0945, 0.0945, 0.0945, 0.0945, 0.0945],
+            "ndcg": [0.0613, 0.0613, 0.0613, 0.0612, 0.0612],
+        },
+        "tau": {
+            "x": [1, 5, 20, 50, 100],
+            "recall": [0.0578, 0.0695, 0.0852, 0.0876, 0.0911],
+            "ndcg": [0.0363, 0.0435, 0.0535, 0.0560, 0.0584],
+        },
+        "tstart": {
+            "x": [0.5, 0.6, 0.7, 0.8, 0.9],
+            "recall": [0.0914, 0.0928, 0.0937, 0.0934, 0.0925],
+            "ndcg": [0.0589, 0.0600, 0.0607, 0.0605, 0.0598],
+        },
+    },
+    "ML-1M": {
+        "rho": {
+            "x": [0.2, 0.4, 0.6, 0.8],
+            "recall": [0.3443, 0.3506, 0.3499, 0.3517],
+            "ndcg": [0.3218, 0.3276, 0.3274, 0.3283],
+        },
+        "N": {
+            "x": [1, 2, 3, 4, 5],
+            "recall": [0.3515, 0.3517, 0.3515, 0.3516, 0.3515],
+            "ndcg": [0.3281, 0.3283, 0.3282, 0.3282, 0.3282],
+        },
+        "tau": {
+            "x": [0.1, 0.4, 0.7, 1.0],
+            "recall": [0.2841, 0.3197, 0.3517, 0.3361],
+            "ndcg": [0.2642, 0.2937, 0.3283, 0.3151],
+        },
+        "tstart": {
+            "x": [0.5, 0.6, 0.7, 0.8, 0.9],
+            "recall": [0.3484, 0.3502, 0.3511, 0.3517, 0.3506],
+            "ndcg": [0.3246, 0.3265, 0.3275, 0.3283, 0.3270],
+        },
+    },
+    "Last-FM": {
+        "rho": {
+            "x": [0.2, 0.4, 0.6, 0.8],
+            "recall": [0.4058, 0.4085, 0.4106, 0.4064],
+            "ndcg": [0.2483, 0.2499, 0.2510, 0.2481],
+        },
+        "N": {
+            "x": [1, 2, 3, 4, 5],
+            "recall": [0.4106, 0.4106, 0.4103, 0.4103, 0.4103],
+            "ndcg": [0.2504, 0.2510, 0.2509, 0.2509, 0.2509],
+        },
+        "tau": {
+            "x": [0.1, 0.4, 0.7, 1.0],
+            "recall": [0.3777, 0.3986, 0.4100, 0.4073],
+            "ndcg": [0.2256, 0.2454, 0.2499, 0.2462],
+        },
+        "tstart": {
+            "x": [0.5, 0.6, 0.7, 0.8, 0.9],
+            "recall": [0.4087, 0.4106, 0.4101, 0.4089, 0.4075],
+            "ndcg": [0.2496, 0.2506, 0.2509, 0.2498, 0.2488],
+        },
+    },
+    "Yelp": {
+        "rho": {
+            "x": [0.2, 0.4, 0.6, 0.8],
+            "recall": [0.1221, 0.1232, 0.1227, 0.1228],
+            "ndcg": [0.0686, 0.0691, 0.0688, 0.0688],
+        },
+        "N": {
+            "x": [1, 2, 3, 4, 5],
+            "recall": [0.1229, 0.1230, 0.1230, 0.1232, 0.1231],
+            "ndcg": [0.0690, 0.0691, 0.0690, 0.0691, 0.0691],
+        },
+        "tau": {
+            "x": [0.1, 0.4, 0.7, 1.0],
+            "recall": [0.0740, 0.1003, 0.1181, 0.1232],
+            "ndcg": [0.0418, 0.0569, 0.0666, 0.0691],
+        },
+        "tstart": {
+            "x": [0.5, 0.6, 0.7, 0.8, 0.9],
+            "recall": [0.1209, 0.1217, 0.1226, 0.1232, 0.1229],
+            "ndcg": [0.0676, 0.0682, 0.0687, 0.0689, 0.0691],
+        },
+    },
+}
 
-    pdf_path = img_dir / name
-    if pdf_path.exists():
-        return pdf_path
 
-    if pdf_path.suffix.lower() == ".pdf":
-        png_path = pdf_path.with_suffix(".png")
-        if png_path.exists():
-            return png_path
-
-    raise FileNotFoundError(f"Missing image: {pdf_path} (or {pdf_path.with_suffix('.png')})")
+PARAMS = [
+    ("rho", r"Impact of $\rho$"),
+    ("N", r"Impact of $N$"),
+    ("tau", r"Impact of $\tau$"),
+    ("tstart", r"Impact of $t_{\mathrm{start}}$"),
+]
 
 
-def _iter_grid_paths(img_dir: Path) -> list[list[Path]]:
-    pairs = _pairs()
-    return [[_resolve_existing(img_dir, name) for name in row] for row in pairs]
-
-
-def _caption_specs() -> list[tuple[tuple[int, int], str]]:
-    return [
-        ((0, 1), "(a) The impact of retention rate hyperparameters"),
-        ((2, 3), "(b) The impact of integration steps hyperparameters"),
-        ((4, 5), "(c) The impact of temperature hyperparameters"),
-    ]
-
-
-def _as_points(inches: float) -> float:
-    return inches * 72.0
-
-
-def _clamp(v: float, lo: float, hi: float) -> float:
-    return max(lo, min(hi, v))
-
-
-def _auto_clip_rect_for(
-    fitz,
-    src_page,
+def _set_nice_yticks(
+    ax,
+    values,
     *,
-    dpi: int = 120,
-    threshold: int = 250,
-    pad_pt: float = 2.0,
-):
-    """Estimate a tight clip rect by rasterizing and trimming near-white borders.
-
-    This avoids accidentally cutting off titles / tick labels which are often
-    very close to the PDF page boundary when the source was saved with tight
-    bounding boxes.
-    """
-
-    rect = src_page.rect
-    scale = dpi / 72.0
-    pix = src_page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
-
-    w, h, n = pix.width, pix.height, pix.n
-    samples = pix.samples
-
-    def _row_has_ink(y: int) -> bool:
-        base = y * w * n
-        row = samples[base : base + w * n]
-        for i in range(0, len(row), n):
-            # background if all channels are near-white
-            if not all(ch >= threshold for ch in row[i : i + n]):
-                return True
-        return False
-
-    def _col_has_ink(x: int, y0: int, y1: int) -> bool:
-        for y in range(y0, y1 + 1):
-            i = (y * w + x) * n
-            if not all(ch >= threshold for ch in samples[i : i + n]):
-                return True
-        return False
-
-    top = 0
-    while top < h and not _row_has_ink(top):
-        top += 1
-
-    bottom = h - 1
-    while bottom >= 0 and not _row_has_ink(bottom):
-        bottom -= 1
-
-    # All white: fallback to full page.
-    if top >= bottom:
-        return rect
-
-    left = 0
-    while left < w and not _col_has_ink(left, top, bottom):
-        left += 1
-
-    right = w - 1
-    while right >= 0 and not _col_has_ink(right, top, bottom):
-        right -= 1
-
-    if left >= right:
-        return rect
-
-    sx = rect.width / w
-    sy = rect.height / h
-
-    l = rect.x0 + left * sx
-    r = rect.x0 + (right + 1) * sx
-    t = rect.y0 + top * sy
-    b = rect.y0 + (bottom + 1) * sy
-
-    # Safety padding (points). Increase this if titles/ticks get cut.
-    l = max(rect.x0, l - pad_pt)
-    r = min(rect.x1, r + pad_pt)
-    t = max(rect.y0, t - pad_pt)
-    b = min(rect.y1, b + pad_pt)
-
-    return fitz.Rect(l, t, r, b)
-
-
-def compose_hyperparameter_grid_pdf(
-    *,
-    out_name: str = "hyperparameter_grid.pdf",
-    cols: int = 6,
-    rows: int = 2,
-    margin_in: float = 0.10,
-    col_gap_in: float = 0.05,
-    group_cols: int = 2,
-    group_gap_in: float = 0.15,
-    row_gap_in: float = 0.02,
-    caption_gap_in: float = 0.06,
-    caption_fontsize: float = 12.0,
-    trim_left: float = 0.00,
-    trim_right: float = 0.00,
-    trim_top: float = 0.00,
-    trim_bottom: float = 0.00,
-    auto_trim: bool = True,
-    auto_trim_dpi: int = 120,
-    auto_trim_threshold: int = 250,
-    auto_trim_pad_pt: float = 4.0,
-    preview_png: bool = False,
-    preview_dpi: int = 200,
+    tick_target: int = 5,
+    lower_pad_ratio: float = 0.18,
+    upper_pad_ratio: float = 0.25,
+    step_base: float = 0.0001,
 ) -> None:
-    """Compose 12 hyperparameter plots into one big PDF by tiling source PDFs.
+    v_min, v_max = float(min(values)), float(max(values))
+    span = v_max - v_min
+    lower_pad = span * lower_pad_ratio
+    upper_pad = span * upper_pad_ratio
+    if lower_pad == 0:
+        lower_pad = max(1e-4, abs(v_max) * 0.01)
+    if upper_pad == 0:
+        upper_pad = max(1e-4, abs(v_max) * 0.01)
 
-    If a source PDF is missing, it will fallback to the PNG with the same stem.
-
-    Layout: 2 rows × 6 cols
-    - Columns 0-1: keeprate (MIND, ML-1M / LastFM, Yelp2018)
-    - Columns 2-3: steps    (MIND, ML-1M / LastFM, Yelp2018)
-    - Columns 4-5: temp     (MIND, ML-1M / LastFM, Yelp2018)
-
-        Spacing (all *_in are inches):
-        - margin_in: page margin around the whole grid
-        - col_gap_in: gap between adjacent columns inside a group
-        - group_gap_in: extra gap between groups (each group has group_cols columns)
-        - row_gap_in: gap between the two rows
-
-        Cropping:
-        - If auto_trim=True (default), we estimate a tight clip box by rasterizing each
-            source page and trimming near-white borders (safer; avoids cutting labels).
-        - Otherwise, trim_* crops away whitespace from each tile (fractions of width/height).
-    """
-
-    fitz = _require_pymupdf()
-    img_dir = Path(__file__).resolve().parent
-    grid = _iter_grid_paths(img_dir)
-
-    # Open one source (prefer first PDF tile) to infer a reasonable tile aspect.
-    first_path = next((p for p in (grid[0][0],) if p.exists()), grid[0][0])
-    if first_path.suffix.lower() == ".pdf":
-        src0 = fitz.open(first_path)
-        src0_page = src0[0]
-        src_rect = src0_page.rect
-        src0.close()
-        tile_aspect = src_rect.height / src_rect.width
+    y0, y1 = v_min - lower_pad, v_max + upper_pad
+    raw_step = (y1 - y0) / max(1, tick_target - 1)
+    if raw_step <= 0 or not np.isfinite(raw_step):
+        step = step_base
     else:
-        tile_aspect = 0.42  # heuristic; PNG fallback should be rare
+        step = max(math.ceil(raw_step / step_base) * step_base, step_base)
 
-    # Convert inches -> PDF points (1 in = 72 pt)
-    margin = _as_points(margin_in)
-    col_gap = _as_points(col_gap_in)
-    group_gap = _as_points(group_gap_in)
-    row_gap = _as_points(row_gap_in)
-    caption_gap = _as_points(caption_gap_in)
+    start = math.floor(y0 / step) * step
+    end = math.ceil(y1 / step) * step
+    ticks = np.arange(start, end + step * 0.5, step)
+    while len(ticks) < 4 and step > step_base:
+        step = step / 2.0
+        start = math.floor(y0 / step) * step
+        end = math.ceil(y1 / step) * step
+        ticks = np.arange(start, end + step * 0.5, step)
+    ticks = np.round(ticks / step_base) * step_base
 
-    if cols <= 0 or rows <= 0:
-        raise ValueError("cols and rows must be positive")
-    if group_cols <= 0:
-        raise ValueError("group_cols must be positive")
-    if cols % group_cols != 0:
-        raise ValueError("cols must be divisible by group_cols")
+    ax.set_ylim(start, end)
+    ax.set_yticks(ticks)
+    ax.yaxis.set_major_formatter(FormatStrFormatter("%.4f"))
 
-    # Add extra spacing after the last column of each group.
-    # Example: cols=6, group_cols=2 => groups are [0,1],[2,3],[4,5], so boundaries are {1,3}.
-    group_boundaries_after: set[int] = {
-        k * group_cols - 1 for k in range(1, cols // group_cols)
-    }
 
-    def _x0_for_col(c: int) -> float:
-        x = margin
-        for i in range(c):
-            x += tile_w
-            # Normal gap between every pair of adjacent columns.
-            x += col_gap
-            if i in group_boundaries_after:
-                # Extra gap between groups (e.g., between col 1 and 2, between col 3 and 4).
-                x += group_gap
-        return x
+def _plot_panel(ax_left, spec, *, title: str, show_legend: bool, compact: bool) -> None:
+    x_labels = spec["x"]
+    x_pos = np.arange(len(x_labels))
+    recall = spec["recall"]
+    ndcg = spec["ndcg"]
 
-    # Choose a compact wide page (good for LaTeX \linewidth figures).
-    # Default target width ~= 12 inches.
-    page_w = _as_points(12.0)
-    n_group_gaps = max(0, (cols // group_cols) - 1)
-    # Total horizontal gaps = normal column gaps + extra group gaps.
-    total_x_gaps = (cols - 1) * col_gap + n_group_gaps * group_gap
-    tile_w = (page_w - 2 * margin - total_x_gaps) / cols
-    tile_h = tile_w * tile_aspect
-    captions_h = _as_points(0.27)
-    page_h = 2 * margin + rows * tile_h + (rows - 1) * row_gap + caption_gap + captions_h
+    color_ndcg = "#F07F2F"
+    color_recall = "#3A66B7"
 
-    out_doc = fitz.open()
-    out_page = out_doc.new_page(width=page_w, height=page_h)
+    ax_right = ax_left.twinx()
+    ax_left.set_zorder(1)
+    ax_right.set_zorder(2)
+    ax_right.patch.set_visible(False)
 
-    def _tile_rect(r: int, c: int):
-        x0 = _x0_for_col(c)
-        y0 = margin + r * (tile_h + row_gap)
-        return fitz.Rect(x0, y0, x0 + tile_w, y0 + tile_h)
+    bar_width = 0.52 if len(x_labels) >= 5 else 0.46
+    bars = ax_left.bar(
+        x_pos,
+        ndcg,
+        width=bar_width,
+        color=color_ndcg,
+        label="N@20",
+        zorder=2,
+    )
+    line_recall, = ax_right.plot(
+        x_pos,
+        recall,
+        marker="x",
+        markersize=6.0 if compact else 8.0,
+        markeredgewidth=1.6 if compact else 2.2,
+        linestyle=(0, (4.5, 2.2)),
+        linewidth=1.9 if compact else 2.5,
+        dash_capstyle="round",
+        color=color_recall,
+        label="R@20",
+        zorder=5,
+    )
 
-    def _clip_rect_for(src_page):
-        rect = src_page.rect
-        if auto_trim:
-            return _auto_clip_rect_for(
-                fitz,
-                src_page,
-                dpi=auto_trim_dpi,
-                threshold=auto_trim_threshold,
-                pad_pt=auto_trim_pad_pt,
-            )
-        l = rect.x0 + rect.width * _clamp(trim_left, 0.0, 0.45)
-        r = rect.x1 - rect.width * _clamp(trim_right, 0.0, 0.45)
-        t = rect.y0 + rect.height * _clamp(trim_top, 0.0, 0.45)
-        b = rect.y1 - rect.height * _clamp(trim_bottom, 0.0, 0.45)
-        return fitz.Rect(l, t, r, b)
+    ax_left.set_xticks(x_pos)
+    ax_left.set_xticklabels([str(x) for x in x_labels], fontweight="bold")
 
-    # Place tiles.
-    for r in range(rows):
-        for c in range(cols):
-            src_path = grid[r][c]
-            target = _tile_rect(r, c)
+    is_main_n_panel = (not compact) and ("Impact of $N$" in title)
+    upper_pad = 0.25 if is_main_n_panel else (0.45 if compact else 0.58)
 
-            if src_path.suffix.lower() == ".pdf":
-                src_doc = fitz.open(src_path)
-                src_page = src_doc[0]
-                clip = _clip_rect_for(src_page)
-                out_page.show_pdf_page(target, src_doc, 0, clip=clip)
-                src_doc.close()
-            else:
-                # PNG fallback: embed as an image
-                out_page.insert_image(target, filename=str(src_path))
+    _set_nice_yticks(
+        ax_left,
+        ndcg,
+        tick_target=4 if compact else 5,
+        upper_pad_ratio=upper_pad,
+    )
+    _set_nice_yticks(
+        ax_right,
+        recall,
+        tick_target=4 if compact else 5,
+        upper_pad_ratio=upper_pad,
+    )
 
-    # Group captions: centered under each 2-column block.
-    cap_y0 = margin + rows * tile_h + (rows - 1) * row_gap + caption_gap
-    cap_y1 = cap_y0 + captions_h
-    for (c0, c1), text in _caption_specs():
-        x0 = _x0_for_col(c0)
-        x1 = _x0_for_col(c1) + tile_w
-        rect = fitz.Rect(x0, cap_y0, x1, cap_y1)
-        out_page.insert_textbox(
-            rect,
-            text,
-            fontsize=caption_fontsize,
-            fontname="Times-Roman",
-            align=1,  # center
+    left_ticks = ax_left.get_yticks()
+    left_ylim = ax_left.get_ylim()
+    right_ylim = ax_right.get_ylim()
+    for y_l in left_ticks:
+        ratio = (y_l - left_ylim[0]) / (left_ylim[1] - left_ylim[0])
+        y_r = right_ylim[0] + ratio * (right_ylim[1] - right_ylim[0])
+        ax_right.axhline(
+            y_r,
+            linestyle=(0, (3.2, 2.4)),
+            linewidth=1.1 if compact else 1.8,
+            color="#D7D7D7",
+            alpha=1.0,
+            zorder=1,
         )
 
-    out_path = img_dir / out_name
-    out_doc.save(out_path)
-    out_doc.close()
+    spine_width = 1.5 if compact else 2.0
+    tick_width = 1.5 if compact else 2.0
+    for spine in ax_left.spines.values():
+        spine.set_linewidth(spine_width)
+        spine.set_color("black")
+    for spine in ax_right.spines.values():
+        spine.set_linewidth(spine_width)
+        spine.set_color("black")
 
-    if preview_png:
-        doc = fitz.open(out_path)
-        page = doc[0]
-        mat = fitz.Matrix(preview_dpi / 72.0, preview_dpi / 72.0)
-        pix = page.get_pixmap(matrix=mat, alpha=False)
-        png_path = out_path.with_suffix(".png")
-        pix.save(png_path)
-        doc.close()
-        print(f"Saved: {out_path.name} / {png_path.name}")
-    else:
-        print(f"Saved: {out_path.name}")
+    tick_size = 5.2 if compact else 9.0
+    x_tick_size = 6.0 if compact else 10.5
+    ax_left.tick_params(axis="x", width=tick_width, length=4.0, pad=4, labelsize=x_tick_size, color="black", labelcolor="black")
+    ax_left.tick_params(axis="y", width=tick_width, length=4.0, pad=3, labelsize=tick_size, color="black", labelcolor=color_ndcg)
+    ax_right.tick_params(axis="y", width=tick_width, length=4.0, pad=3, labelsize=tick_size, color="black", labelcolor=color_recall)
+
+    if show_legend or compact:
+        legend = ax_right.legend(
+            handles=[bars, line_recall],
+            labels=["N@20", "R@20"],
+            loc="upper right",
+            bbox_to_anchor=(0.98, 1.02 if compact else (0.98 if is_main_n_panel else 1.01)),
+            ncol=2,
+            frameon=True,
+            fancybox=False,
+            framealpha=1.0,
+            edgecolor="gray",
+            columnspacing=0.25 if compact else 0.35,
+            handletextpad=0.20 if compact else 0.25,
+            borderpad=0.18 if compact else 0.25,
+            handlelength=1.6 if compact else 1.8,
+            fontsize=8.0 if compact else None,
+        )
+        legend.get_frame().set_linewidth(1.4 if compact else 1.8)
+        for text in legend.get_texts():
+            text.set_fontweight("bold")
+
+    ax_left.set_title(title, fontweight="bold", pad=5)
+
+
+def compose_main_grid(img_dir: Path) -> None:
+    fig, axes = plt.subplots(2, 2, figsize=(6.2, 4.6))
+    specs = DATA["ML-1M"]
+    for idx, (ax, (key, title)) in enumerate(zip(axes.flat, PARAMS)):
+        _plot_panel(
+            ax,
+            specs[key],
+            title=f"({chr(ord('a') + idx)}) {title}",
+            show_legend=True,
+            compact=False,
+        )
+
+    fig.subplots_adjust(left=0.10, right=0.90, top=0.92, bottom=0.10, wspace=0.58, hspace=0.42)
+    out_path = img_dir / "hyperparameter_grid.pdf"
+    fig.savefig(out_path, bbox_inches="tight")
+    fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def compose_all_grid(img_dir: Path) -> None:
+    fig = plt.figure(figsize=(8.9, 5.9))
+    outer = fig.add_gridspec(2, 2, wspace=0.20, hspace=0.26)
+    datasets = ["MIND", "ML-1M", "Last-FM", "Yelp"]
+
+    for idx, (key, title) in enumerate(PARAMS):
+        outer_cell = outer[idx // 2, idx % 2]
+        title_ax = fig.add_subplot(outer_cell)
+        title_ax.set_title(
+            f"({chr(ord('a') + idx)}) {title}",
+            fontsize=13,
+            fontfamily="Times New Roman",
+            fontweight="bold",
+            pad=14,
+        )
+        title_ax.axis("off")
+
+        inner = outer_cell.subgridspec(2, 2, wspace=0.50, hspace=0.38)
+        for d_idx, dataset in enumerate(datasets):
+            ax = fig.add_subplot(inner[d_idx // 2, d_idx % 2])
+            _plot_panel(
+                ax,
+                DATA[dataset][key],
+                title=dataset,
+                show_legend=False,
+                compact=True,
+            )
+            ax.title.set_fontsize(7.5)
+            ax.title.set_fontfamily("Times New Roman")
+
+    fig.subplots_adjust(left=0.065, right=0.935, top=0.95, bottom=0.055)
+
+    out_path = img_dir / "hyperparameter_grid_all.pdf"
+    fig.savefig(out_path, bbox_inches="tight")
+    fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def main() -> None:
+    img_dir = Path(__file__).resolve().parent
+    compose_main_grid(img_dir)
+    compose_all_grid(img_dir)
+    print("Saved: hyperparameter_grid.pdf/png and hyperparameter_grid_all.pdf/png")
 
 
 if __name__ == "__main__":
-    compose_hyperparameter_grid_pdf(preview_png=True)
+    main()

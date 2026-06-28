@@ -89,9 +89,9 @@ for ax, (results, ylabel, xlabel) in zip(axes.flat, panels):
         )
 
     ax.set_xticks(x)
-    ax.set_xticklabels(groups)
-    ax.set_xlabel(xlabel, fontsize=7.4, labelpad=1.5)
-    ax.set_ylabel(ylabel, fontsize=7.4, labelpad=1.5)
+    ax.set_xticklabels(groups, fontweight="bold")
+    ax.set_xlabel(xlabel, fontsize=7.4, labelpad=1.5, fontweight="bold")
+    ax.set_ylabel(ylabel, fontsize=7.4, labelpad=1.5, fontweight="bold")
     ax.grid(
         True,
         linestyle="--",
@@ -122,24 +122,26 @@ fig.legend(
     handlelength=0.95,
     handleheight=0.65,
     handletextpad=0.25,
-    prop={"size": 6.7},
+    prop={"size": 6.7, "weight": "bold"},
 )
 
 fig.text(
     0.5,
     0.485,
-    r"(a) Performance $w.r.t.$ cold-start user groups",
+    "(a) Performance w.r.t. cold-start user groups",
     ha="center",
     va="center",
     fontsize=8.0,
+    fontweight="bold",
 )
 fig.text(
     0.5,
     0.032,
-    r"(b) Performance $w.r.t.$ sparse item groups",
+    "(b) Performance w.r.t. sparse item groups",
     ha="center",
     va="center",
     fontsize=8.0,
+    fontweight="bold",
 )
 
 fig.subplots_adjust(
